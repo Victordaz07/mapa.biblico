@@ -1,0 +1,12 @@
+{
+  "bbox": [
+    34.5,
+    30.8,
+    36.6,
+    33.7
+  ],
+  "width": 2000,
+  "height": 2600,
+  "projection": "linear",
+  "note": "lng->x and lat->y are direct linear proportions of bbox: x=(lng-west)/(east-west)*width, y=(1-(lat-south)/(north-south))*height"
+}

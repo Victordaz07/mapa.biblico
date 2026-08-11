@@ -1,0 +1,15 @@
+# Derivados regenerables pesados (se recrean con los scripts)
+input/derived/*.npy
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# SO
+Thumbs.db
+.DS_Store
+
+# Temporales
+*.tmp
