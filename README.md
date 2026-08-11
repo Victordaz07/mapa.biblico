@@ -26,9 +26,11 @@ de la iteración 1.
 - [x] Relieve: hillshade multidireccional (tonal 17%) + hachurado por rango de
       pendiente (<3° nada · 3-10° escaso · 10-20° medio · >20° denso), trazos
       cuesta abajo estilo grabado. → `preview/relief_preview.png`
-- [ ] Mar/lagos: navy sólido `#0D1B2A` + oleaje horizontal ondulado
-      `#B8923A`; Mar Muerto unificado en un solo cuerpo.
-- [ ] Río Jordán: spline suave, trazo navy 4px + borde dorado 1px.
+- [x] Mar/lagos: navy sólido `#0D1B2A` + oleaje horizontal ondulado
+      `#B8923A`; Mar Muerto unificado en un solo cuerpo. → `preview/sea_preview.png`
+- [x] Río Jordán: spline suave de la centerline (iter1), trazo navy ~4px con
+      leve taper + borde dorado ~1px; sólo sobre tierra (afluente norte +
+      tramo Galilea→Mar Muerto). → `preview/jordan_preview.png`
 - [ ] Composición final + export PNG master / WebP <600KB / calibracion.json.
 
 ## Geometría
@@ -49,7 +51,9 @@ pip install -r requirements.txt
 cd src
 python recover_geometry.py   # -> input/derived/water_masks.npz (+ debug)
 python relief.py             # -> preview/relief_preview.png (+ thumb)
-# (pendiente) python sea.py, python compose.py
+python sea.py                # -> preview/sea_preview.png + derived/sea_layer.npz
+python jordan.py             # -> preview/jordan_preview.png + derived/jordan_layer.npz
+# (pendiente) python compose.py
 ```
 
 ## Paleta
