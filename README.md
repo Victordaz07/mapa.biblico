@@ -19,7 +19,7 @@ x = (lng - 34.5) / (36.6 - 34.5) * 2000
 y = (1 - (lat - 30.8) / (33.7 - 30.8)) * 2600
 ```
 
-## Estado — Iteración 2 (en curso)
+## Estado — Iteración 2 (completa)
 Rehacer el tratamiento **visual** conservando geometría y calibración perfectas
 de la iteración 1.
 
@@ -31,7 +31,12 @@ de la iteración 1.
 - [x] Río Jordán: spline suave de la centerline (iter1), trazo navy ~4px con
       leve taper + borde dorado ~1px; sólo sobre tierra (afluente norte +
       tramo Galilea→Mar Muerto). → `preview/jordan_preview.png`
-- [ ] Composición final + export PNG master / WebP <600KB / calibracion.json.
+- [x] Composición final: apila pergamino → relieve → agua → Jordán y exporta
+      master PNG (2000×2600), WebP web (<600KB) y `calibracion.json`.
+      → `preview/final_preview.png`, `output/mapa_base.png`
+
+**Iteración 2 completa.** El mapa base queda en `output/` listo para superponer
+rutas/lugares bíblicos usando la calibración lineal.
 
 ## Geometría
 La geografía de la iteración 1 (costa, lagos, Jordán) se **preserva exactamente**
@@ -53,7 +58,7 @@ python recover_geometry.py   # -> input/derived/water_masks.npz (+ debug)
 python relief.py             # -> preview/relief_preview.png (+ thumb)
 python sea.py                # -> preview/sea_preview.png + derived/sea_layer.npz
 python jordan.py             # -> preview/jordan_preview.png + derived/jordan_layer.npz
-# (pendiente) python compose.py
+python compose.py            # -> output/mapa_base.png + .webp + calibracion.json
 ```
 
 ## Paleta

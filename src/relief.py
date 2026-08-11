@@ -23,6 +23,7 @@ slope, aspect, nanmask = slope_aspect(elev)
 d = np.load(os.path.join(DERIVED, "water_masks.npz"))
 water = d["med"] | d["galilee"] | d["dead"]
 land = valid & ~water
+np.save(os.path.join(DERIVED, "land_mask.npy"), land)   # para compose (misma región tonal)
 
 # ---------------- A) capa tonal hillshade ----------------
 print("hillshade multidireccional…")
