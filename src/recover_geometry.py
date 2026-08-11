@@ -73,8 +73,12 @@ for a, b in zip(present, present[1:]):
         for k, y in enumerate(range(a+1, b)):
             t = (k+1)/(b-a)
             l = int(round(la*(1-t)+lb*t)); r = int(round(ra*(1-t)+rb*t))
-            cx = (l+r)//2
-            bridge[y, cx-max(6,(r-l)//4): cx+max(6,(r-l)//4)+1] = True  # istmo estrecho
+            # istmo natural: rellena la anchura interpolada completa (con un
+            # ligero estrechamiento en el centro del hueco) -> transición suave
+            cx = (l+r)/2.0; half = (r-l)/2.0
+            taper = 0.62 + 0.38*abs(2*t-1)         # más estrecho a mitad del hueco
+            half = max(24.0, half*taper)
+            bridge[y, int(cx-half): int(cx+half)+1] = True
 dead_union = bridge | dead
 dead_union = binary_closing(dead_union, iterations=10)
 dead_union = binary_fill_holes(dead_union)
@@ -82,7 +86,7 @@ dead_union = binary_opening(dead_union, iterations=2)   # suaviza dientes del ci
 dead_union = binary_fill_holes(dead_union)
 # simplificado suave: redondea el contorno sin encoger los lóbulos
 from scipy.ndimage import gaussian_filter as _gf
-dead_union = _gf(dead_union.astype(np.float32), 3.5) > 0.5
+dead_union = _gf(dead_union.astype(np.float32), 4.5) > 0.5
 dead_union = binary_fill_holes(dead_union)
 dlab, dn = label(dead_union)
 print("Mar Muerto: piezas=", len(dead_pieces), "componentes tras union=", dn, "area=", int(dead_union.sum()))
