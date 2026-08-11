@@ -31,6 +31,13 @@ PX_X_M = (EAST - WEST) / W * 111320.0 * np.cos(np.radians(_latmid))
 PX_Y_M = (NORTH - SOUTH) / H * 110570.0
 
 
+def to_px(lng, lat):
+    """Convierte lng/lat -> (x,y) en px según la calibración lineal (INMUTABLE)."""
+    x = (lng - WEST) / (EAST - WEST) * W
+    y = (1.0 - (lat - SOUTH) / (NORTH - SOUTH)) * H
+    return x, y
+
+
 def load_dem_grid():
     """DEM SRTM resampleado (bilinear) al grid exacto 2000x2600 de la calibración.
     Devuelve (elev_float con NaN en nodata, mask_valid)."""
