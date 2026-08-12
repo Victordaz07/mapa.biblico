@@ -59,7 +59,7 @@
   .stage{ position:relative; flex:1; overflow:hidden; background:var(--parch2); touch-action:none }
   .viewport{ position:absolute; inset:0; overflow:hidden; cursor:grab }
   .viewport.grabbing{ cursor:grabbing }
-  .canvas{ position:absolute; top:0; left:0; width:1000px; height:950px; transform-origin:0 0;
+  .canvas{ position:absolute; top:0; left:0; width:1000px; height:1100px; transform-origin:0 0;
     will-change:transform; --z:1 }
   .canvas .citybase{ position:absolute; inset:0; width:100%; height:100% }
 
@@ -137,7 +137,7 @@
     <button class="menu-btn" id="menuBtn" aria-label="Índice">☰</button>
     <div class="viewport" id="viewport">
       <div class="canvas" id="canvas">
-        <svg class="citybase" id="citybase" viewBox="0 0 1000 950" preserveAspectRatio="none" aria-label="Plano de Jerusalén"></svg>
+        <svg class="citybase" id="citybase" viewBox="0 0 1000 1100" preserveAspectRatio="none" aria-label="Plano de Jerusalén"></svg>
         <!-- marcadores inyectados por JS -->
       </div>
     </div>
@@ -160,96 +160,167 @@
 (function(){
   "use strict";
   const NS='http://www.w3.org/2000/svg';
-  const VB={w:1000,h:950};
+  const VB={w:1000,h:1100};
   const svg=document.getElementById('citybase');
-
-  // ---- geometría base (coordenadas en el viewBox 1000x950) ----
-  const WALL=[[352,232],[556,206],[708,240],[726,300],[720,430],[690,545],[636,700],[583,822],
-              [540,806],[452,712],[360,600],[312,470],[300,352]];
-  const TEMPLE={x:556,y:296,w:158,h:176};              // explanada
-  const OLIVES=[[792,250],[900,300],[936,430],[900,560],[812,596],[786,470]];
-  const KIDRON=[[726,300],[792,300],[812,596],[712,560],[720,430]];      // valle este
-  const HINNOM=[[300,470],[360,600],[452,712],[540,806],[470,842],[352,742],[286,566]]; // valle sur/oeste
+  const INK='#4a3a22', INK2='#6b5636', PARCH='#efe6cf', NAVY='#123049';
 
   function poly(pts){ return pts.map(p=>p.join(',')).join(' '); }
   function add(tag,attrs,parent){ const e=document.createElementNS(NS,tag);
     for(const k in attrs) e.setAttribute(k,attrs[k]); (parent||svg).appendChild(e); return e; }
-
-  // fondo pergamino
-  add('rect',{x:0,y:0,width:VB.w,height:VB.h,fill:'#efe6cf'});
-
-  // defs: hachurado de colinas
-  const defs=add('defs',{});
-  defs.innerHTML =
-    '<pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">'+
-      '<line x1="0" y1="0" x2="0" y2="7" stroke="#7a6a4a" stroke-width="0.8" opacity="0.55"/></pattern>'+
-    '<pattern id="hatchS" width="9" height="9" patternTransform="rotate(-40)" patternUnits="userSpaceOnUse">'+
-      '<line x1="0" y1="0" x2="0" y2="9" stroke="#8a6a3a" stroke-width="0.7" opacity="0.4"/></pattern>';
-
-  // valles (tinte suave + hachura ligera)
-  add('polygon',{points:poly(KIDRON),fill:'#d9cba6',opacity:0.55});
-  add('polygon',{points:poly(KIDRON),fill:'url(#hatchS)',opacity:0.5});
-  add('polygon',{points:poly(HINNOM),fill:'#d9cba6',opacity:0.5});
-  add('polygon',{points:poly(HINNOM),fill:'url(#hatchS)',opacity:0.45});
-
-  // Monte de los Olivos (colina hachurada + contorno)
-  add('polygon',{points:poly(OLIVES),fill:'#e0d2ab',stroke:'#6b5636','stroke-width':1.2});
-  add('polygon',{points:poly(OLIVES),fill:'url(#hatch)',opacity:0.7});
-  // olivos (pequeños árboles)
-  const OTREES=[[830,340],[865,380],[820,420],[860,470],[880,420],[840,510],[890,360]];
-  OTREES.forEach(([x,y])=>{ add('line',{x1:x,y1:y,x2:x,y2:y-11,stroke:'#5a3c18','stroke-width':1.1});
-    add('circle',{cx:x,cy:y-15,r:5,fill:'none',stroke:'#5a3c18','stroke-width':1.1}); });
-
-  // trama de casas (procedural) dentro de la muralla, fuera del Templo/valles
   function inPoly(x,y,pg){ let c=false; for(let i=0,j=pg.length-1;i<pg.length;j=i++){
     const xi=pg[i][0],yi=pg[i][1],xj=pg[j][0],yj=pg[j][1];
     if(((yi>y)!=(yj>y)) && (x<(xj-xi)*(y-yi)/(yj-yi)+xi)) c=!c; } return c; }
-  const fabric=add('g',{stroke:'#6b5636','stroke-width':0.9,fill:'none',opacity:0.75});
-  let seed=1; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
-  for(let gy=250; gy<820; gy+=17){
-    for(let gx=300; gx<720; gx+=17){
-      const x=gx+(rnd()-0.5)*10, y=gy+(rnd()-0.5)*10;
-      if(!inPoly(x,y,WALL)) continue;
-      if(x>TEMPLE.x-6 && x<TEMPLE.x+TEMPLE.w+6 && y>TEMPLE.y-6 && y<TEMPLE.y+TEMPLE.h+6) continue;
-      const w=6+rnd()*7, h=5+rnd()*6, r=(rnd()-0.5)*18;
-      add('rect',{x:(-w/2).toFixed(1),y:(-h/2).toFixed(1),width:w.toFixed(1),height:h.toFixed(1),
-        transform:`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${r.toFixed(1)})`},fabric);
-    }
+  let seed=7; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+  function txt(x,y,s,o){ o=o||{}; add('text',{x:x,y:y,'font-size':o.size||12,fill:o.fill||INK,
+    'font-style':o.style||'italic','font-family':'Georgia,serif','text-anchor':o.anchor||'middle',
+    'font-weight':o.weight||'normal'}).textContent=s; }
+
+  // ===== geometría base (viewBox 1000x1100; x:O→E, y:N→S) =====
+  const TEMPLE={x:640,y:250,w:246,h:336};                         // Monte del Templo (herodiano)
+  const SPUR=[[624,588],[706,600],[720,772],[690,910],[660,1006],[600,908],[586,772],[600,600]]; // Ciudad de David
+  const CITY=[[250,256],[384,232],[520,236],[612,254],[624,588],[600,600],[586,772],
+              [300,762],[258,600],[248,392]];                     // ciudad amurallada (sin Templo)
+  const OLIVES=[[904,300],[1000,342],[1000,628],[906,606],[892,452]];
+  const KIDRON=[[886,262],[906,300],[906,606],[720,772],[706,600],[886,586]];
+  const HINNOM=[[248,392],[258,600],[300,762],[586,772],[560,838],[300,820],[236,600],[228,430]];
+
+  // fondo pergamino
+  add('rect',{x:0,y:0,width:VB.w,height:VB.h,fill:PARCH});
+  const defs=add('defs',{});
+  defs.innerHTML =
+    '<pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">'+
+      '<line x1="0" y1="0" x2="0" y2="7" stroke="#7a6a4a" stroke-width="0.7" opacity="0.5"/></pattern>';
+
+  // valles (tinte + contorno suave)
+  [KIDRON,HINNOM].forEach(v=>{ add('polygon',{points:poly(v),fill:'#dccda9',opacity:0.5});
+    add('polygon',{points:poly(v),fill:'url(#hatch)',opacity:0.4}); });
+  txt(940,470,'Valle de Cedrón',{size:12,fill:INK2}); txt(300,845,'Valle de Hinom',{size:12,fill:INK2});
+  txt(566,560,'Tiropeón',{size:10,fill:INK2,anchor:'start'});
+
+  // Monte de los Olivos (colina hachurada + olivos)
+  add('polygon',{points:poly(OLIVES),fill:'#e0d2ab',stroke:INK2,'stroke-width':1.2});
+  add('polygon',{points:poly(OLIVES),fill:'url(#hatch)',opacity:0.6});
+  for(let i=0;i<12;i++){ const x=930+rnd()*60,y=340+rnd()*250;
+    add('line',{x1:x,y1:y,x2:x,y2:y-10,stroke:'#5a3c18','stroke-width':1});
+    add('circle',{cx:x,cy:y-14,r:4.5,fill:'none',stroke:'#5a3c18','stroke-width':1}); }
+  txt(956,300,'Monte de los Olivos',{size:12,fill:INK,weight:'bold'});
+
+  // ===== relleno de terreno de la ciudad (para que las calles resalten) =====
+  add('polygon',{points:poly(CITY),fill:'#eaddba'});
+  add('polygon',{points:poly(SPUR),fill:'#eaddba'});
+
+  // ===== calles principales (bandas claras bajo la trama) =====
+  const streets=[
+    'M556,258 Q596,420 628,588 Q648,800 660,1002',   // eje N-S del Tiropeón (calle principal)
+    'M300,300 Q470,320 624,318',                       // decumano norte
+    'M300,660 Q470,650 624,548',                       // calle de la Ciudad Alta al puente del Templo
+    'M300,470 L620,470',                               // transversal media (hacia el puente)
+    'M420,258 L430,760',                               // cardo de la Ciudad Alta
+  ];
+  streets.forEach(d=>add('path',{d:d,fill:'none',stroke:'#e7dabb','stroke-width':13,
+    'stroke-linecap':'round'}));
+
+  // ===== trama urbana: manzanas (insulae) con patio, por distrito =====
+  const blocks=add('g',{stroke:INK2,'stroke-width':0.9,fill:'#e2d3ac'});
+  function onStreet(x,y){ // evita dibujar manzanas sobre las calles principales
+    // aproximación: descarta franja del eje del Tiropeón y del cardo
+    const tiro = 556 + (y-258)*0.16; if(Math.abs(x-tiro)<16 && y>300) return true;
+    if(Math.abs(x-425)<15 && y>300 && y<760) return true;
+    if(Math.abs(y-470)<14 && x<620) return true;
+    if(Math.abs(y-318)<14) return true;
+    return false;
   }
+  function fabric(x0,x1,y0,y1,step,poly1){
+    for(let gy=y0; gy<y1; gy+=step){ for(let gx=x0; gx<x1; gx+=step){
+      const x=gx+(rnd()-0.5)*3, y=gy+(rnd()-0.5)*3;
+      if(!inPoly(x,y,poly1)) continue;
+      if(x>TEMPLE.x-10 && x<TEMPLE.x+TEMPLE.w+10 && y>TEMPLE.y-10 && y<TEMPLE.y+TEMPLE.h+10) continue;
+      if(onStreet(x,y)) continue;
+      const w=step-4-rnd()*2, h=step-4-rnd()*2;
+      add('rect',{x:x.toFixed(1),y:y.toFixed(1),width:w.toFixed(1),height:h.toFixed(1)},blocks);
+      if(w>13&&h>13&&rnd()>0.35)  // patio interior
+        add('rect',{x:(x+w/2-2.5).toFixed(1),y:(y+h/2-2.5).toFixed(1),width:5,height:5,
+          fill:PARCH,stroke:INK2,'stroke-width':0.6},blocks);
+    }}
+  }
+  fabric(300,624,258,430,20,CITY);       // barrio norte
+  fabric(262,600,438,760,18,CITY);       // Ciudad Alta (más fina)
+  fabric(586,724,600,1000,19,SPUR);      // Ciudad de David (espolón)
+  txt(400,610,'CIUDAD ALTA',{size:12,fill:INK2,style:'normal',weight:'bold'});
+  txt(648,700,'CIUDAD',{size:9,fill:INK2,style:'normal'}); txt(648,712,'DE DAVID',{size:9,fill:INK2,style:'normal'});
 
-  // calles principales (insinuadas)
-  add('path',{d:'M300,352 Q460,360 556,384',fill:'none',stroke:'#b7a878','stroke-width':3,opacity:0.6});
-  add('path',{d:'M470,235 Q500,470 560,720',fill:'none',stroke:'#b7a878','stroke-width':3,opacity:0.6});
+  // ===== estanques (agua) =====
+  function pool(x,y,w,h,label,ly){ add('rect',{x:x,y:y,width:w,height:h,rx:3,fill:NAVY,opacity:0.9});
+    if(label) txt(x+w/2,ly||y-4,label,{size:10,fill:INK}); }
+  pool(700,232,30,18,null); pool(700,254,30,18,'Betesda',252);   // estanque doble de Betesda (N)
+  pool(646,996,34,26,'Siloé',1034);                               // Siloé (S)
+  pool(322,388,30,40,'E. de las Torres',384);                     // estanque de Ezequías (NO)
 
-  // Explanada del Templo (plataforma + columnata + santuario)
-  add('rect',{x:TEMPLE.x,y:TEMPLE.y,width:TEMPLE.w,height:TEMPLE.h,fill:'#e7d9b4',
-    stroke:'#4a3a22','stroke-width':2.4});
-  for(let i=1;i<9;i++){ const xx=TEMPLE.x+i*TEMPLE.w/9;
-    add('line',{x1:xx,y1:TEMPLE.y,x2:xx,y2:TEMPLE.y+6,stroke:'#4a3a22','stroke-width':1.4});
-    add('line',{x1:xx,y1:TEMPLE.y+TEMPLE.h-6,x2:xx,y2:TEMPLE.y+TEMPLE.h,stroke:'#4a3a22','stroke-width':1.4}); }
-  add('rect',{x:TEMPLE.x+44,y:TEMPLE.y+52,width:70,height:72,fill:'#efe6cf',stroke:'#4a3a22','stroke-width':2});
+  // ===== Monte del Templo (plataforma + pórticos + Real Stoa + santuario) =====
+  const T=TEMPLE;
+  add('rect',{x:T.x,y:T.y,width:T.w,height:T.h,fill:'#ecdfbc',stroke:INK,'stroke-width':2.6});
+  // pórticos: dobles líneas internas en los 4 lados
+  add('rect',{x:T.x+10,y:T.y+10,width:T.w-20,height:T.h-20,fill:'none',stroke:INK,'stroke-width':1});
+  // columnata (ticks) en el pórtico
+  for(let i=0;i<=24;i++){ const xx=T.x+6+i*(T.w-12)/24;
+    add('line',{x1:xx,y1:T.y+2,x2:xx,y2:T.y+10,stroke:INK,'stroke-width':0.8});
+    add('line',{x1:xx,y1:T.y+T.h-10,x2:xx,y2:T.y+T.h-2,stroke:INK,'stroke-width':0.8}); }
+  for(let i=0;i<=32;i++){ const yy=T.y+6+i*(T.h-12)/32;
+    add('line',{x1:T.x+2,y1:yy,x2:T.x+10,y2:yy,stroke:INK,'stroke-width':0.8});
+    add('line',{x1:T.x+T.w-10,y1:yy,x2:T.x+T.w-2,y2:yy,stroke:INK,'stroke-width':0.8}); }
+  // Real Stoa (columnata reforzada en el lado sur)
+  add('rect',{x:T.x+10,y:T.y+T.h-34,width:T.w-20,height:24,fill:'#e2d3ac',stroke:INK,'stroke-width':0.9});
+  for(let i=0;i<=26;i++){ const xx=T.x+12+i*(T.w-24)/26;
+    add('line',{x1:xx,y1:T.y+T.h-34,x2:xx,y2:T.y+T.h-10,stroke:INK,'stroke-width':0.7}); }
+  // recinto interior + Santuario (con Lugar Santísimo)
+  add('rect',{x:T.x+56,y:T.y+96,width:150,height:150,fill:'none',stroke:INK,'stroke-width':1});
+  add('rect',{x:T.x+96,y:T.y+120,width:70,height:104,fill:PARCH,stroke:INK,'stroke-width':2});
+  add('rect',{x:T.x+112,y:T.y+128,width:38,height:34,fill:'#e2d3ac',stroke:INK,'stroke-width':1.2});
+  txt(T.x+T.w/2,T.y-8,'Monte del Templo',{size:13,fill:INK,weight:'bold'});
 
-  // Muralla: doble filo grabado + torres en vértices
-  add('polygon',{points:poly(WALL),fill:'none',stroke:'#4a3a22','stroke-width':6.5,'stroke-linejoin':'round'});
-  add('polygon',{points:poly(WALL),fill:'none',stroke:'#efe6cf','stroke-width':2.4,'stroke-linejoin':'round'});
-  WALL.forEach(([x,y])=>add('rect',{x:x-4,y:y-4,width:8,height:8,fill:'#efe6cf',stroke:'#4a3a22','stroke-width':1.6}));
+  // Fortaleza Antonia (esquina NO del Templo) con torres
+  add('rect',{x:T.x-30,y:T.y-30,width:66,height:56,fill:'#e2d3ac',stroke:INK,'stroke-width':2});
+  [[T.x-30,T.y-30],[T.x+30,T.y-30],[T.x-30,T.y+20],[T.x+30,T.y+20]].forEach(([tx,ty])=>
+    add('rect',{x:tx-4,y:ty-4,width:10,height:10,fill:'#e2d3ac',stroke:INK,'stroke-width':1.2}));
 
-  // río/estanque insinuado en Siloé (sur)
-  add('circle',{cx:575,cy:792,r:10,fill:'#0d1b2a',opacity:0.85});
+  // Palacio de Herodes + tres torres (muro oeste de la Ciudad Alta)
+  add('rect',{x:266,y:452,width:74,height:104,fill:'#e2d3ac',stroke:INK,'stroke-width':2});
+  add('rect',{x:276,y:462,width:54,height:84,fill:'none',stroke:INK,'stroke-width':0.9});
+  [270,296,322].forEach(tx=>add('rect',{x:tx,y:436,width:16,height:16,fill:'#e2d3ac',stroke:INK,'stroke-width':1.4}));
+  txt(303,432,'Torres de Herodes',{size:9,fill:INK});
+
+  // ===== murallas: Primer y Segundo muro (doble filo) + torres + Templo =====
+  function wall(pts,closed){ const p=closed?poly(pts)+' '+pts[0].join(','):poly(pts);
+    add('polyline',{points:p,fill:'none',stroke:INK,'stroke-width':6,'stroke-linejoin':'round'});
+    add('polyline',{points:p,fill:'none',stroke:PARCH,'stroke-width':2.2,'stroke-linejoin':'round'});
+    pts.forEach(([x,y],i)=>{ if(i%2===0) add('rect',{x:x-3.5,y:y-3.5,width:7,height:7,fill:PARCH,stroke:INK,'stroke-width':1.3}); }); }
+  wall(CITY,true);
+  wall([[T.x,T.y],[T.x+T.w,T.y],[T.x+T.w,T.y+T.h],[T.x,T.y+T.h],[T.x,T.y]],false); // muros del Templo
+  wall(SPUR,true);                                                                  // muro del espolón
+
+  // ===== puertas (rótulos) =====
+  [['P. de Gennat',252,468,'end'],['P. de los Esenios',300,776,'middle'],
+   ['P. de la Fuente',664,1002,'start'],['P. de las Ovejas',720,238,'start'],
+   ['P. Dorada',888,470,'start']].forEach(([n,x,y,a])=>txt(x+(a==='end'?-6:a==='start'?6:0),y,n,{size:9,fill:INK2,anchor:a}));
+
+  // puente al Templo (arco de Wilson) desde la Ciudad Alta
+  add('line',{x1:600,y1:470,x2:640,y2:470,stroke:INK,'stroke-width':2.4});
+  add('line',{x1:600,y1:466,x2:640,y2:466,stroke:INK,'stroke-width':0.8});
+  add('line',{x1:600,y1:474,x2:640,y2:474,stroke:INK,'stroke-width':0.8});
 
   // ---------- datos de sitios ----------
   // x,y en viewBox -> %; cat: site|pass ; p = orden en el recorrido de la Pasión
   const RAW=[
-    {name:"El Templo",x:635,y:384,note:"Reconstruido por Herodes sobre el de Salomón. Jesús enseñó aquí y predijo su destrucción.",refs:"Mt 24:1-2 · Jn 2:13-22",cat:"site"},
-    {name:"Torre Antonia",x:556,y:300,note:"Guarnición romana junto al Templo; sede del pretorio. Pablo fue llevado aquí.",refs:"Hch 21:31-40",cat:"pass",p:3,plabel:"Antonia (Pretorio)"},
-    {name:"Huerto de Getsemaní",x:820,y:436,note:"Al pie del Monte de los Olivos. Jesús oró y fue arrestado la noche de la Pasión.",refs:"Mt 26:36-56",cat:"pass",p:2},
-    {name:"Monte de los Olivos",x:892,y:430,note:"Desde aquí Jesús enseñó sobre el fin y, tras resucitar, ascendió al cielo.",refs:"Hch 1:9-12",cat:"site"},
-    {name:"Cenáculo",x:388,y:648,note:"La 'habitación del piso superior': la Última Cena y, después, Pentecostés.",refs:"Lc 22:12 · Hch 2:1-4",cat:"pass",p:1,plabel:"Cenáculo (Última Cena)"},
-    {name:"Gólgota (Calvario)",x:300,y:212,note:"El 'lugar de la Calavera', fuera de la muralla: crucifixión y sepulcro de Jesús.",refs:"Jn 19:17-18",cat:"pass",p:4},
-    {name:"Charca de Siloam",x:575,y:792,note:"Jesús envió a lavarse aquí a un ciego, que recobró la vista.",refs:"Jn 9:1-11",cat:"site"},
-    {name:"Palacio de Herodes",x:330,y:472,note:"Residencia real junto al muro oeste; posible lugar del juicio ante Pilato.",refs:"Lc 23:6-11",cat:"site"},
-    {name:"Estanque de Betesda",x:664,y:262,note:"Junto a la puerta de las Ovejas; Jesús sanó a un paralítico en sábado.",refs:"Jn 5:1-9",cat:"site"},
-    {name:"Ciudad de David",x:600,y:620,note:"El núcleo más antiguo de Jerusalén, en el espolón sur bajo el Templo.",refs:"2 Sm 5:6-9",cat:"site"},
+    {name:"El Templo",x:770,y:410,note:"Reconstruido por Herodes sobre el de Salomón. Jesús enseñó aquí y predijo su destrucción.",refs:"Mt 24:1-2 · Jn 2:13-22",cat:"site"},
+    {name:"Torre Antonia",x:632,y:250,note:"Guarnición romana junto al Templo; sede del pretorio. Pablo fue llevado aquí.",refs:"Hch 21:31-40",cat:"pass",p:3,plabel:"Antonia (Pretorio)"},
+    {name:"Huerto de Getsemaní",x:912,y:474,note:"Al pie del Monte de los Olivos. Jesús oró y fue arrestado la noche de la Pasión.",refs:"Mt 26:36-56",cat:"pass",p:2},
+    {name:"Monte de los Olivos",x:964,y:452,note:"Desde aquí Jesús enseñó sobre el fin y, tras resucitar, ascendió al cielo.",refs:"Hch 1:9-12",cat:"site"},
+    {name:"Cenáculo",x:352,y:690,note:"La 'habitación del piso superior': la Última Cena y, después, Pentecostés.",refs:"Lc 22:12 · Hch 2:1-4",cat:"pass",p:1,plabel:"Cenáculo (Última Cena)"},
+    {name:"Gólgota (Calvario)",x:250,y:230,note:"El 'lugar de la Calavera', fuera de la muralla: crucifixión y sepulcro de Jesús.",refs:"Jn 19:17-18",cat:"pass",p:4},
+    {name:"Charca de Siloam",x:662,y:1008,note:"Jesús envió a lavarse aquí a un ciego, que recobró la vista.",refs:"Jn 9:1-11",cat:"site"},
+    {name:"Palacio de Herodes",x:302,y:504,note:"Residencia real junto al muro oeste; posible lugar del juicio ante Pilato.",refs:"Lc 23:6-11",cat:"site"},
+    {name:"Estanque de Betesda",x:716,y:242,note:"Junto a la puerta de las Ovejas; Jesús sanó a un paralítico en sábado.",refs:"Jn 5:1-9",cat:"site"},
+    {name:"Ciudad de David",x:650,y:770,note:"El núcleo más antiguo de Jerusalén, en el espolón sur bajo el Templo.",refs:"2 Sm 5:6-9",cat:"site"},
   ];
   RAW.forEach(s=>{ s.px=+(s.x/VB.w*100).toFixed(2); s.py=+(s.y/VB.h*100).toFixed(2); });
   // recorrido de la Pasión (orden por p)
@@ -269,7 +340,7 @@
   const cNote=document.getElementById('c-note'),cRefs=document.getElementById('c-refs');
   const tourLbl=document.getElementById('tourLbl');
   const sidebar=document.getElementById('sidebar'),scrim=document.getElementById('scrim');
-  const CW=1000,CH=950; let scale=1,tx=0,ty=0,minScale=0.2,maxScale=6,current=-1;
+  const CW=1000,CH=1100; let scale=1,tx=0,ty=0,minScale=0.2,maxScale=6,current=-1;
   const hots=[];
 
   RAW.forEach((s,i)=>{
@@ -297,20 +368,20 @@
 
   // ---- Vía Dolorosa: 14 estaciones (Antonia → Gólgota) ----
   const VIA=[
-    {n:1, x:556,y:300, name:"Jesús es condenado a muerte", note:"Pilato lo sentencia en el pretorio.", refs:"Jn 19:16"},
-    {n:2, x:526,y:314, name:"Jesús carga con la cruz", note:"Recibe la cruz sobre sus hombros.", refs:"Jn 19:17"},
-    {n:3, x:496,y:326, name:"Primera caída", note:"Cae por primera vez bajo el peso de la cruz.", refs:"Tradición"},
-    {n:4, x:466,y:334, name:"Encuentra a su Madre", note:"Se cruza con María en el camino.", refs:"Tradición"},
-    {n:5, x:436,y:338, name:"Simón de Cirene", note:"Obligan a Simón a ayudarle a llevar la cruz.", refs:"Mc 15:21"},
-    {n:6, x:406,y:334, name:"Verónica enjuga su rostro", note:"Una mujer limpia el rostro de Jesús.", refs:"Tradición"},
-    {n:7, x:378,y:324, name:"Segunda caída", note:"Cae por segunda vez.", refs:"Tradición"},
-    {n:8, x:352,y:308, name:"Las mujeres de Jerusalén", note:"Consuela a las mujeres que lloran por él.", refs:"Lc 23:28"},
-    {n:9, x:332,y:288, name:"Tercera caída", note:"Cae por tercera vez, cerca del Gólgota.", refs:"Tradición"},
-    {n:10,x:316,y:266, name:"Despojado de sus vestiduras", note:"Le quitan las vestiduras.", refs:"Jn 19:23"},
-    {n:11,x:307,y:246, name:"Clavado en la cruz", note:"Es crucificado en el Gólgota.", refs:"Lc 23:33"},
-    {n:12,x:301,y:231, name:"Muere en la cruz", note:"Expira a la hora nona.", refs:"Mc 15:37"},
-    {n:13,x:300,y:221, name:"Bajado de la cruz", note:"Su cuerpo es entregado a su Madre.", refs:"Jn 19:38"},
-    {n:14,x:300,y:213, name:"Sepultado", note:"Puesto en un sepulcro nuevo, junto al lugar.", refs:"Jn 19:41-42"},
+    {n:1, x:632,y:256, name:"Jesús es condenado a muerte", note:"Pilato lo sentencia en el pretorio.", refs:"Jn 19:16"},
+    {n:2, x:598,y:274, name:"Jesús carga con la cruz", note:"Recibe la cruz sobre sus hombros.", refs:"Jn 19:17"},
+    {n:3, x:562,y:288, name:"Primera caída", note:"Cae por primera vez bajo el peso de la cruz.", refs:"Tradición"},
+    {n:4, x:524,y:296, name:"Encuentra a su Madre", note:"Se cruza con María en el camino.", refs:"Tradición"},
+    {n:5, x:486,y:298, name:"Simón de Cirene", note:"Obligan a Simón a ayudarle a llevar la cruz.", refs:"Mc 15:21"},
+    {n:6, x:448,y:294, name:"Verónica enjuga su rostro", note:"Una mujer limpia el rostro de Jesús.", refs:"Tradición"},
+    {n:7, x:412,y:286, name:"Segunda caída", note:"Cae por segunda vez.", refs:"Tradición"},
+    {n:8, x:378,y:274, name:"Las mujeres de Jerusalén", note:"Consuela a las mujeres que lloran por él.", refs:"Lc 23:28"},
+    {n:9, x:344,y:262, name:"Tercera caída", note:"Cae por tercera vez, cerca del Gólgota.", refs:"Tradición"},
+    {n:10,x:314,y:252, name:"Despojado de sus vestiduras", note:"Le quitan las vestiduras.", refs:"Jn 19:23"},
+    {n:11,x:288,y:244, name:"Clavado en la cruz", note:"Es crucificado en el Gólgota.", refs:"Lc 23:33"},
+    {n:12,x:270,y:238, name:"Muere en la cruz", note:"Expira a la hora nona.", refs:"Mc 15:37"},
+    {n:13,x:258,y:234, name:"Bajado de la cruz", note:"Su cuerpo es entregado a su Madre.", refs:"Jn 19:38"},
+    {n:14,x:250,y:230, name:"Sepultado", note:"Puesto en un sepulcro nuevo, junto al lugar.", refs:"Jn 19:41-42"},
   ];
   VIA.forEach(s=>{ s.px=+(s.x/VB.w*100).toFixed(2); s.py=+(s.y/VB.h*100).toFixed(2); });
   // ruta en el SVG (oculta hasta activar)
