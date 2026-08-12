@@ -78,6 +78,21 @@
     stroke-linecap:round; stroke-linejoin:round; transition:stroke .2s, stroke-width .2s }
   .road-fill.on{ stroke:var(--gold2); stroke-width:.40 }
   .road-casing.on{ stroke:#3a2c16 }
+  /* rutas históricas (toggle) */
+  .histroute{ opacity:0; transition:opacity .25s; pointer-events:none }
+  .histroute.on{ opacity:1 }
+  .hr-cas{ fill:none; stroke:#f4ecd8; stroke-width:.9; stroke-linecap:round; stroke-linejoin:round; opacity:.7 }
+  .hr-line{ fill:none; stroke-width:.5; stroke-dasharray:2.6 2.1; stroke-linecap:round; stroke-linejoin:round }
+  /* control de rutas en el sidebar */
+  .routes-ctrl{ padding:8px 14px 4px }
+  .rc-title{ font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:6px }
+  .rc-chips{ display:flex; flex-wrap:wrap; gap:6px }
+  .rc-chip{ display:inline-flex; align-items:center; gap:6px; font-family:inherit; font-size:12.5px;
+    color:var(--ink); background:#fbf5e4; border:1px solid var(--line); border-radius:999px;
+    padding:5px 11px 5px 8px; cursor:pointer }
+  .rc-chip i{ width:11px; height:11px; border-radius:50%; display:inline-block; opacity:.45 }
+  .rc-chip.on{ border-color:var(--gold); background:#fff }
+  .rc-chip.on i{ opacity:1 }
 
   .hot{ position:absolute; transform:translate(-50%,-50%); cursor:pointer;
     border:0; padding:0; background:transparent; }
@@ -173,6 +188,10 @@
     </div>
     <div class="search">
       <input id="search" type="search" placeholder="Buscar lugar…" autocomplete="off" aria-label="Buscar lugar">
+    </div>
+    <div class="routes-ctrl" id="routesCtrl">
+      <div class="rc-title">Rutas Galilea → Jerusalén</div>
+      <div class="rc-chips" id="rcChips"></div>
     </div>
     <div class="list" id="list"></div>
     <div class="sb-foot">Grabado sobre relieve real (SRTM)</div>
@@ -277,6 +296,27 @@
     const f=document.createElementNS(SVGNS,'polyline');
     f.setAttribute('points',ptsStr(rt)); f.setAttribute('class','road-fill'); f.dataset.k=k;
     routeSvg.appendChild(f); legFill.push(f);
+  });
+  // 3) rutas históricas (ocultas hasta activarlas con los chips)
+  const HIST = window.HISTROUTES || [];
+  const histG = {};
+  HIST.forEach(h=>{
+    const g=document.createElementNS(SVGNS,'g'); g.setAttribute('class','histroute'); g.dataset.route=h.id;
+    const p=h.pts.map(q=>q[0]+','+(q[1]*ASPECT)).join(' ');
+    const cas=document.createElementNS(SVGNS,'polyline'); cas.setAttribute('points',p); cas.setAttribute('class','hr-cas');
+    const ln=document.createElementNS(SVGNS,'polyline'); ln.setAttribute('points',p); ln.setAttribute('class','hr-line');
+    ln.setAttribute('stroke',h.color);
+    g.appendChild(cas); g.appendChild(ln); routeSvg.appendChild(g); histG[h.id]=g;
+  });
+  // chips de activación en el sidebar
+  const rcChips=document.getElementById('rcChips');
+  if(!HIST.length){ const rc=document.getElementById('routesCtrl'); if(rc) rc.style.display='none'; }
+  HIST.forEach(h=>{
+    const c=document.createElement('button'); c.className='rc-chip'; c.dataset.route=h.id;
+    c.innerHTML='<i style="background:'+h.color+'"></i>'+h.name.replace(/^Ruta \w+ \(por (.+)\)$/,'Por $1');
+    c.addEventListener('click',()=>{ const on=!c.classList.contains('on');
+      c.classList.toggle('on',on); histG[h.id].classList.toggle('on',on); });
+    rcChips.appendChild(c);
   });
 
   // ---------- lista lateral ----------

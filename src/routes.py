@@ -108,16 +108,51 @@ for a, b in zip(seq, seq[1:]):
     routes.append({"a": names[a], "b": names[b], "pts": smooth_decimate(path)})
     print(f"  {names[a]:>22} -> {names[b]:<12} coste={c:8.1f} puntos={len(path)}")
 
+# --- 5b) RUTAS HISTÓRICAS documentadas (Galilea <-> Jerusalén) ---------------
+# Se trazan por sus corredores reales encadenando least-cost entre waypoints
+# (ciudades intermedias o puntos del valle). Colores del mapa de referencia.
+def chain(waypoints_lnglat):
+    """Ruta continua que pasa por cada waypoint (lng,lat)."""
+    nodes = [snap_walkable(to_small(*to_px(lng, lat))) for lng, lat in waypoints_lnglat]
+    allrc = []
+    for a, b in zip(nodes, nodes[1:]):
+        path, _ = route_through_array(cost, a, b, fully_connected=True, geometric=True)
+        allrc.extend(path if not allrc else path[1:])
+    return smooth_decimate(np.asarray(allrc))
+
+hist = [
+    {"id": "samaria", "name": "Ruta habitual (por Samaria)", "color": "#a23b2e",
+     "pts": chain([(35.5753, 32.8808),   # Cafarnaúm / Galilea
+                   (35.2978, 32.7021),   # Nazaret
+                   (35.2833, 32.2139),   # Sicar (Samaria)
+                   (35.2900, 31.8700),   # Efraín (aprox.)
+                   (35.2354, 31.7780)])},# Jerusalén
+    {"id": "perea", "name": "Ruta alternativa (por Perea)", "color": "#3f6b3a",
+     "pts": chain([(35.5753, 32.8808),   # Cafarnaúm / Galilea
+                   (35.6200, 32.5500),   # bajada por la ribera este (Perea)
+                   (35.6000, 32.0500),   # Perea, valle del Jordán (este)
+                   (35.4440, 31.8700),   # Jericó (cruce del Jordán)
+                   (35.2354, 31.7780)])},# Jerusalén
+]
+for h in hist:
+    print(f"  ruta histórica: {h['name']:<32} puntos={len(h['pts'])}")
+
 with open(os.path.join(os.path.dirname(PREVIEW), "web", "routes.js"), "w", encoding="utf-8") as f:
     f.write("window.ROUTES = " + json.dumps(routes, ensure_ascii=False) + ";\n")
+    f.write("window.HISTROUTES = " + json.dumps(hist, ensure_ascii=False) + ";\n")
 
 # --- 6) preview de verificación sobre el mapa anotado ---
 base = Image.open(os.path.join(PREVIEW, "annotated_preview_full.png")).convert("RGB")
 from PIL import ImageDraw
 dr = ImageDraw.Draw(base)
-for rt in routes:
-    poly = [(x / 100 * W, y / 100 * H) for x, y in rt["pts"]]
+def draw_poly(pts, fill, width):
+    poly = [(x / 100 * W, y / 100 * H) for x, y in pts]
     for i in range(len(poly) - 1):
-        dr.line([poly[i], poly[i + 1]], fill=(184, 146, 58), width=6)
+        dr.line([poly[i], poly[i + 1]], fill=fill, width=width)
+for rt in routes:
+    draw_poly(rt["pts"], (184, 146, 58), 6)
+for h in hist:
+    c = tuple(int(h["color"][i:i+2], 16) for i in (1, 3, 5))
+    draw_poly(h["pts"], c, 9)
 base.resize((W // 2, H // 2), Image.LANCZOS).save(os.path.join(PREVIEW, "routes_preview.png"))
-print("OK -> web/routes.js +", len(routes), "tramos · preview/routes_preview.png")
+print("OK -> web/routes.js +", len(routes), "tramos +", len(hist), "rutas históricas")
