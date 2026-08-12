@@ -65,9 +65,13 @@
     display:block; -webkit-user-drag:none; user-select:none }
   .route{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
     overflow:visible }
-  .leg{ fill:none; stroke:var(--gold); stroke-width:1.7; stroke-dasharray:3.5 3;
-    stroke-linecap:round; stroke-linejoin:round; opacity:.62; transition:opacity .2s }
-  .leg.on{ opacity:1; stroke:var(--gold2); stroke-width:2.6; stroke-dasharray:none }
+  /* caminos grabados: doble línea (filo sepia + centro claro), escalan con el mapa */
+  .road-casing{ fill:none; stroke:#4a3a22; stroke-width:.66;
+    stroke-linecap:round; stroke-linejoin:round; opacity:.9 }
+  .road-fill{ fill:none; stroke:#ece0c0; stroke-width:.30;
+    stroke-linecap:round; stroke-linejoin:round; transition:stroke .2s, stroke-width .2s }
+  .road-fill.on{ stroke:var(--gold2); stroke-width:.40 }
+  .road-casing.on{ stroke:#3a2c16 }
 
   .hot{ position:absolute; transform:translate(-50%,-50%); cursor:pointer;
     border:0; padding:0; background:transparent; }
@@ -230,13 +234,20 @@
   // Si no hay routes.js, cae a líneas rectas entre puntos consecutivos.
   const ROUTES = window.ROUTES || P.slice(0,-1).map((p,i)=>(
     {a:p.name,b:P[i+1].name,pts:[[p.x,p.y],[P[i+1].x,P[i+1].y]]}));
-  const legEls=[];
+  const SVGNS='http://www.w3.org/2000/svg';
+  const legFill=[], legCase=[];
+  const ptsStr=rt=>rt.pts.map(q=>q[0]+','+(q[1]*ASPECT)).join(' ');
+  // 1) todos los filos (casing) primero, para que las uniones queden limpias
+  ROUTES.forEach(rt=>{
+    const c=document.createElementNS(SVGNS,'polyline');
+    c.setAttribute('points',ptsStr(rt)); c.setAttribute('class','road-casing');
+    routeSvg.appendChild(c); legCase.push(c);
+  });
+  // 2) el centro claro encima
   ROUTES.forEach((rt,k)=>{
-    const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
-    pl.setAttribute('points', rt.pts.map(q=>q[0]+','+(q[1]*ASPECT)).join(' '));
-    pl.setAttribute('vector-effect','non-scaling-stroke');
-    pl.setAttribute('class','leg'); pl.dataset.k=k;
-    routeSvg.appendChild(pl); legEls.push(pl);
+    const f=document.createElementNS(SVGNS,'polyline');
+    f.setAttribute('points',ptsStr(rt)); f.setAttribute('class','road-fill'); f.dataset.k=k;
+    routeSvg.appendChild(f); legFill.push(f);
   });
 
   // ---------- lista lateral ----------
@@ -301,13 +312,15 @@
     tourPos.textContent=(i+1)+' / '+P.length+' · '+p.name;
     document.getElementById('prev').disabled=false;
     document.getElementById('next').disabled=false;
-    legEls.forEach((el,k)=>el.classList.toggle('on', k===i-1)); // resalta el tramo entrante
+    legFill.forEach((el,k)=>el.classList.toggle('on', k===i-1)); // resalta el tramo entrante
+    legCase.forEach((el,k)=>el.classList.toggle('on', k===i-1));
     if(fly) flyTo(p);
   }
   function closeCard(){ card.classList.remove('show');
     hots.forEach(h=>h.classList.remove('active'));
     [...listEl.children].forEach(it=>it.classList.remove('active'));
-    legEls.forEach(el=>el.classList.remove('on')); current=-1; }
+    legFill.forEach(el=>el.classList.remove('on'));
+    legCase.forEach(el=>el.classList.remove('on')); current=-1; }
   document.getElementById('close').addEventListener('click',e=>{e.stopPropagation();closeCard();});
 
   // ---------- recorrido guiado ----------
