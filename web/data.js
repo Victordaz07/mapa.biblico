@@ -191,5 +191,149 @@ window.PLACES = [
     "refs": "Hch 9:36-43",
     "cat": "ciudad",
     "tier": "secondary"
+  },
+  {
+    "name": "Monte de las Bienaventuranzas",
+    "x": 50.133,
+    "y": 28.493,
+    "note": "Sermón del Monte: las Bienaventuranzas.",
+    "refs": "Mt 5-7",
+    "cat": "ministerio",
+    "tier": "secondary"
+  },
+  {
+    "name": "Samaria (Sebastia)",
+    "x": 32.819,
+    "y": 49.09,
+    "note": "Ciudad reconstruida por Herodes; región donde Felipe predicó con gran poder.",
+    "refs": "Hch 8:5-8",
+    "cat": "ciudad",
+    "tier": "secondary"
+  },
+  {
+    "name": "Damasco",
+    "x": 84.595,
+    "y": 6.421,
+    "note": "Conversión de Pablo en el camino a esta ciudad.",
+    "refs": "Hch 9:1-19",
+    "cat": "ciudad",
+    "tier": "secondary"
+  },
+  {
+    "name": "Cesarea de Filipo",
+    "x": 56.8,
+    "y": 15.541,
+    "note": "Pedro confiesa que Jesús es el Cristo.",
+    "refs": "Mt 16:13-20",
+    "cat": "ministerio",
+    "tier": "secondary"
+  },
+  {
+    "name": "Gamala",
+    "x": 59.143,
+    "y": 28.0,
+    "note": "Ciudad de la Decápolis en los Altos del Golán.",
+    "refs": "Contexto histórico — Josefo",
+    "cat": "ciudad",
+    "tier": "secondary"
+  },
+  {
+    "name": "Pela",
+    "x": 52.924,
+    "y": 43.028,
+    "note": "Ciudad de la Decápolis; la tradición dice que los cristianos huyeron aquí antes del 70 d.C.",
+    "refs": "Eusebio, Hist. Ecl. III.5",
+    "cat": "ciudad",
+    "tier": "secondary"
+  },
+  {
+    "name": "Gerasa",
+    "x": 66.281,
+    "y": 48.928,
+    "note": "Tradicionalmente asociada a la sanación del endemoniado geraseno.",
+    "refs": "Mc 5:1-20",
+    "cat": "milagro",
+    "tier": "secondary"
+  },
+  {
+    "name": "Gadara",
+    "x": 56.271,
+    "y": 36.055,
+    "note": "Sitio alternativo de la sanación del endemoniado (región de los gadarenos).",
+    "refs": "Mt 8:28-34",
+    "cat": "ciudad",
+    "tier": "secondary"
+  },
+  {
+    "name": "Hipos",
+    "x": 55.038,
+    "y": 31.39,
+    "note": "Ciudad de la Decápolis con vista al mar de Galilea.",
+    "refs": "Contexto histórico — Decápolis",
+    "cat": "ciudad",
+    "tier": "secondary"
+  },
+  {
+    "name": "Monte Guerizim",
+    "x": 36.786,
+    "y": 51.869,
+    "note": "Monte sagrado samaritano, mencionado en la conversación con la samaritana.",
+    "refs": "Jn 4:20-21",
+    "cat": "ministerio",
+    "tier": "secondary"
+  },
+  {
+    "name": "Lida",
+    "x": 18.69,
+    "y": 60.297,
+    "note": "Pedro sana a Eneas, paralítico de ocho años.",
+    "refs": "Hch 9:32-35",
+    "cat": "milagro",
+    "tier": "secondary"
+  },
+  {
+    "name": "Arimatea",
+    "x": 22.857,
+    "y": 59.31,
+    "note": "Ciudad natal de José, que sepultó a Jesús en su propia tumba.",
+    "refs": "Mt 27:57-60",
+    "cat": "pasion",
+    "tier": "secondary"
+  },
+  {
+    "name": "Efraín",
+    "x": 36.31,
+    "y": 58.907,
+    "note": "Jesús se retiró aquí con sus discípulos antes de la Pasión final.",
+    "refs": "Jn 11:54",
+    "cat": "pasion",
+    "tier": "secondary"
+  },
+  {
+    "name": "Herodión",
+    "x": 35.41,
+    "y": 70.162,
+    "note": "Fortaleza-palacio de Herodes el Grande, cerca de Belén.",
+    "refs": "Contexto histórico — Josefo",
+    "cat": "ciudad",
+    "tier": "secondary"
+  },
+  {
+    "name": "Hebrón",
+    "x": 28.562,
+    "y": 74.738,
+    "note": "Ciudad de los patriarcas; tumba de Abraham, Isaac y Jacob.",
+    "refs": "Gn 23:19 · 2 S 2:1-4",
+    "cat": "ciudad",
+    "tier": "secondary"
+  },
+  {
+    "name": "Masada",
+    "x": 40.648,
+    "y": 82.221,
+    "note": "Fortaleza de Herodes sobre el Mar Muerto; último reducto de la revuelta judía (73 d.C.).",
+    "refs": "Contexto histórico — Josefo",
+    "cat": "ciudad",
+    "tier": "secondary"
   }
 ];

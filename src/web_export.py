@@ -46,6 +46,23 @@ SECONDARY = [
     ("Betfagué",    35.2469, 31.7772, "Punto de partida de la entrada triunfal a Jerusalén.", "Mt 21:1-11", "pasion"),
     ("Cesarea",     34.8917, 32.5000, "Sede del gobernador romano; puerto y prisión de Pablo.", "Hch 23-26", "ciudad"),
     ("Jope",        34.7550, 32.0522, "Pedro resucita a Tabita; visión de los alimentos.", "Hch 9:36-43", "ciudad"),
+    # + gazetteer ampliado (Decápolis, Samaria, Damasco, sitios de la Pasión)
+    ("Monte de las Bienaventuranzas", 35.5528, 32.8737, "Sermón del Monte: las Bienaventuranzas.", "Mt 5-7", "ministerio"),
+    ("Samaria (Sebastia)", 35.1892, 32.2764, "Ciudad reconstruida por Herodes; región donde Felipe predicó con gran poder.", "Hch 8:5-8", "ciudad"),
+    ("Damasco", 36.2765, 33.5138, "Conversión de Pablo en el camino a esta ciudad.", "Hch 9:1-19", "ciudad"),
+    ("Cesarea de Filipo", 35.6928, 33.2493, "Pedro confiesa que Jesús es el Cristo.", "Mt 16:13-20", "ministerio"),
+    ("Gamala", 35.7420, 32.8880, "Ciudad de la Decápolis en los Altos del Golán.", "Contexto histórico — Josefo", "ciudad"),
+    ("Pela", 35.6114, 32.4522, "Ciudad de la Decápolis; la tradición dice que los cristianos huyeron aquí antes del 70 d.C.", "Eusebio, Hist. Ecl. III.5", "ciudad"),
+    ("Gerasa", 35.8919, 32.2811, "Tradicionalmente asociada a la sanación del endemoniado geraseno.", "Mc 5:1-20", "milagro"),
+    ("Gadara", 35.6817, 32.6544, "Sitio alternativo de la sanación del endemoniado (región de los gadarenos).", "Mt 8:28-34", "ciudad"),
+    ("Hipos", 35.6558, 32.7897, "Ciudad de la Decápolis con vista al mar de Galilea.", "Contexto histórico — Decápolis", "ciudad"),
+    ("Monte Guerizim", 35.2725, 32.1958, "Monte sagrado samaritano, mencionado en la conversación con la samaritana.", "Jn 4:20-21", "ministerio"),
+    ("Lida", 34.8925, 31.9514, "Pedro sana a Eneas, paralítico de ocho años.", "Hch 9:32-35", "milagro"),
+    ("Arimatea", 34.9800, 31.9800, "Ciudad natal de José, que sepultó a Jesús en su propia tumba.", "Mt 27:57-60", "pasion"),
+    ("Efraín", 35.2625, 31.9917, "Jesús se retiró aquí con sus discípulos antes de la Pasión final.", "Jn 11:54", "pasion"),
+    ("Herodión", 35.2436, 31.6653, "Fortaleza-palacio de Herodes el Grande, cerca de Belén.", "Contexto histórico — Josefo", "ciudad"),
+    ("Hebrón", 35.0998, 31.5326, "Ciudad de los patriarcas; tumba de Abraham, Isaac y Jacob.", "Gn 23:19 · 2 S 2:1-4", "ciudad"),
+    ("Masada", 35.3536, 31.3156, "Fortaleza de Herodes sobre el Mar Muerto; último reducto de la revuelta judía (73 d.C.).", "Contexto histórico — Josefo", "ciudad"),
 ]
 
 
