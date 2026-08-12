@@ -85,9 +85,14 @@
   .histroute{ opacity:0; transition:opacity .25s; pointer-events:none }
   .histroute.on{ opacity:1 }
   .histroute .rt-line{ stroke-dasharray:7 5 }                          /* guion parejo */
+  .histroute.solid .rt-line{ stroke-dasharray:none; stroke-width:1.2 } /* calzadas: sólido fino */
+  .histroute.solid .rt-halo{ opacity:.4 }
+  .histroute.camino .rt-line{ opacity:.85 }
   /* control de rutas en el sidebar */
   .routes-ctrl{ padding:8px 14px 4px }
   .rc-title{ font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:6px }
+  .rc-group{ margin-bottom:9px }
+  .rc-grouptitle{ font-size:10px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin:0 0 5px }
   .rc-chips{ display:flex; flex-wrap:wrap; gap:6px }
   .rc-chip{ display:inline-flex; align-items:center; gap:6px; font-family:inherit; font-size:12.5px;
     color:var(--ink); background:#fbf5e4; border:1px solid var(--line); border-radius:999px;
@@ -196,8 +201,8 @@
       <input id="search" type="search" placeholder="Buscar lugar…" autocomplete="off" aria-label="Buscar lugar">
     </div>
     <div class="routes-ctrl" id="routesCtrl">
-      <div class="rc-title">Rutas Galilea → Jerusalén</div>
-      <div class="rc-chips" id="rcChips"></div>
+      <div class="rc-title">Rutas históricas</div>
+      <div id="rcGroups"></div>
     </div>
     <div class="list" id="list"></div>
     <div class="sb-foot">Grabado sobre relieve real (SRTM)</div>
@@ -315,19 +320,36 @@
   }
   // 1) itinerario narrativo (un grupo por tramo, para poder resaltar en el recorrido)
   ROUTES.forEach((rt,k)=>{ const g=routeGroup(rt.pts,'itin'); g.dataset.k=k; legEls.push(g); });
-  // 2) rutas históricas (ocultas hasta activarlas con los chips)
+  // 2) rutas históricas (ocultas hasta activarlas)
   const HIST = window.HISTROUTES || [];
   const histG = {};
-  HIST.forEach(h=>{ histG[h.id]=routeGroup(h.pts,'histroute',h.color); histG[h.id].dataset.route=h.id; });
-  // chips de activación en el sidebar
-  const rcChips=document.getElementById('rcChips');
-  if(!HIST.length){ const rc=document.getElementById('routesCtrl'); if(rc) rc.style.display='none'; }
   HIST.forEach(h=>{
-    const c=document.createElement('button'); c.className='rc-chip'; c.dataset.route=h.id;
-    c.innerHTML='<i style="background:'+h.color+'"></i>'+h.name.replace(/^Ruta \w+ \(por (.+)\)$/,'Por $1');
-    c.addEventListener('click',()=>{ const on=!c.classList.contains('on');
-      c.classList.toggle('on',on); histG[h.id].classList.toggle('on',on); });
-    rcChips.appendChild(c);
+    const cls='histroute '+(h.cat||'')+(h.style==='solid'?' solid':'');
+    histG[h.id]=routeGroup(h.pts,cls,h.color); histG[h.id].dataset.route=h.id;
+  });
+  // leyenda agrupada por categoría
+  const CATLABEL={galjer:"Galilea → Jerusalén",camino:"Calzadas romanas",
+                  ministerio:"Viajes de Jesús",pablo:"Hechos · Pablo"};
+  const CATORDER=["galjer","camino","ministerio","pablo"];
+  const rcG=document.getElementById('rcGroups');
+  if(!HIST.length){ const rc=document.getElementById('routesCtrl'); if(rc) rc.style.display='none'; }
+  const byCat={}; HIST.forEach(h=>{ (byCat[h.cat]=byCat[h.cat]||[]).push(h); });
+  function mkChip(label,color,fn){ const c=document.createElement('button'); c.className='rc-chip';
+    c.innerHTML='<i style="background:'+color+'"></i>'+label; c.addEventListener('click',()=>fn(c)); return c; }
+  CATORDER.forEach(cat=>{ const rs=byCat[cat]; if(!rs) return;
+    const g=document.createElement('div'); g.className='rc-group';
+    const t=document.createElement('div'); t.className='rc-grouptitle'; t.textContent=CATLABEL[cat]||cat; g.appendChild(t);
+    const chips=document.createElement('div'); chips.className='rc-chips'; g.appendChild(chips);
+    if(cat==='camino'){                                   // un toggle para toda la red
+      chips.appendChild(mkChip('Mostrar red', rs[0].color, c=>{
+        const on=!c.classList.contains('on'); c.classList.toggle('on',on);
+        rs.forEach(h=>histG[h.id].classList.toggle('on',on)); }));
+    } else {                                              // un chip por ruta
+      rs.forEach(h=>chips.appendChild(mkChip(h.name, h.color, c=>{
+        const on=!c.classList.contains('on'); c.classList.toggle('on',on);
+        histG[h.id].classList.toggle('on',on); })));
+    }
+    rcG.appendChild(g);
   });
 
   // ---------- lista lateral ----------

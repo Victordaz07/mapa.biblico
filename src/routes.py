@@ -120,22 +120,40 @@ def chain(waypoints_lnglat):
         allrc.extend(path if not allrc else path[1:])
     return smooth_decimate(np.asarray(allrc))
 
-hist = [
-    {"id": "samaria", "name": "Ruta habitual (por Samaria)", "color": "#a23b2e",
-     "pts": chain([(35.5753, 32.8808),   # Cafarnaúm / Galilea
-                   (35.2978, 32.7021),   # Nazaret
-                   (35.2833, 32.2139),   # Sicar (Samaria)
-                   (35.2900, 31.8700),   # Efraín (aprox.)
-                   (35.2354, 31.7780)])},# Jerusalén
-    {"id": "perea", "name": "Ruta alternativa (por Perea)", "color": "#3f6b3a",
-     "pts": chain([(35.5753, 32.8808),   # Cafarnaúm / Galilea
-                   (35.6200, 32.5500),   # bajada por la ribera este (Perea)
-                   (35.6000, 32.0500),   # Perea, valle del Jordán (este)
-                   (35.4440, 31.8700),   # Jericó (cruce del Jordán)
-                   (35.2354, 31.7780)])},# Jerusalén
+# Cada ruta: id, name, cat (galjer|camino|ministerio|pablo), color, style, waypoints(lng,lat)
+ROUTESPEC = [
+    # --- Galilea <-> Jerusalén (afinadas: pasan por las ciudades correctas) ---
+    dict(id="samaria", name="Por Samaria", cat="galjer", color="#a23b2e", style="dash",
+         wp=[(35.5753,32.8808),(35.2978,32.7021),(35.2833,32.2139),(35.2625,31.9917),(35.2354,31.7780)]),
+    dict(id="perea", name="Por Perea", cat="galjer", color="#3f6b3a", style="dash",
+         wp=[(35.5753,32.8808),(35.6817,32.6544),(35.6114,32.4522),(35.4440,31.8700),(35.2354,31.7780)]),
+    # --- Calzadas romanas (red principal, línea sólida marrón) ---
+    dict(id="viamaris", name="Vía Maris", cat="camino", color="#8a6a3a", style="solid",
+         wp=[(34.7550,32.0522),(34.8917,32.5000),(35.1840,32.5850),(35.5320,32.7959),(35.5753,32.8808),(35.6300,32.9100),(36.2765,33.5138)]),
+    dict(id="valle", name="Camino del valle", cat="camino", color="#8a6a3a", style="solid",
+         wp=[(35.5320,32.7959),(35.5000,32.5036),(35.4440,31.8700),(35.2354,31.7780)]),
+    dict(id="ridge", name="Camino de la cordillera", cat="camino", color="#8a6a3a", style="solid",
+         wp=[(35.2354,31.7780),(35.2833,32.2139),(35.1892,32.2764),(35.1840,32.5850)]),
+    dict(id="costajer", name="Camino Jope–Jerusalén", cat="camino", color="#8a6a3a", style="solid",
+         wp=[(34.7550,32.0522),(34.8925,31.9514),(34.9892,31.8390),(35.2354,31.7780)]),
+    dict(id="transjordan", name="Camino de Transjordania", cat="camino", color="#8a6a3a", style="solid",
+         wp=[(36.2765,33.5138),(35.6817,32.6544),(35.6114,32.4522),(35.9330,31.9500)]),
+    # --- Viajes del ministerio de Jesús (guion azulado) ---
+    dict(id="galilea", name="Gira por Galilea", cat="ministerio", color="#2f6f8f", style="dash",
+         wp=[(35.2978,32.7021),(35.3419,32.7480),(35.5753,32.8808),(35.6300,32.9100),(35.5647,32.9106),(35.5169,32.8267),(35.3714,32.6339),(35.2978,32.7021)]),
+    dict(id="cesareafilipo", name="A Cesarea de Filipo", cat="ministerio", color="#2f6f8f", style="dash",
+         wp=[(35.5753,32.8808),(35.6300,32.9100),(35.6928,33.2493)]),
+    # --- Hechos / Pablo (guion naranja) ---
+    dict(id="damasco", name="Camino a Damasco", cat="pablo", color="#b5642a", style="dash",
+         wp=[(35.2354,31.7780),(35.4440,31.8700),(35.5000,32.5036),(35.6558,32.7897),(36.2765,33.5138)]),
+    dict(id="pablocesarea", name="Pablo a Cesarea", cat="pablo", color="#b5642a", style="dash",
+         wp=[(35.2354,31.7780),(34.9390,32.1040),(34.8917,32.5000)]),
 ]
-for h in hist:
-    print(f"  ruta histórica: {h['name']:<32} puntos={len(h['pts'])}")
+hist = []
+for r in ROUTESPEC:
+    hist.append({"id": r["id"], "name": r["name"], "cat": r["cat"],
+                 "color": r["color"], "style": r["style"], "pts": chain(r["wp"])})
+    print(f"  {r['cat']:>10} · {r['name']:<26} puntos={len(hist[-1]['pts'])}")
 
 with open(os.path.join(os.path.dirname(PREVIEW), "web", "routes.js"), "w", encoding="utf-8") as f:
     f.write("window.ROUTES = " + json.dumps(routes, ensure_ascii=False) + ";\n")
