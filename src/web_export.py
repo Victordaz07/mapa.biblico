@@ -78,6 +78,8 @@ def main():
             "r": round(scale / W * 100 * 1.15, 3),
             "note": note, "refs": refs, "cat": cat, "tier": "primary",
         })
+        if name == "Jerusalén":
+            data[-1]["link"] = "jerusalen.html"   # drill-down a la vista de ciudad
     data.sort(key=lambda d: d["n"])
 
     # --- ciudades SECUNDARIAS (punto + etiqueta, fuera del recorrido) ---

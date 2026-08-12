@@ -63,7 +63,8 @@ window.PLACES = [
     "note": "Entrada triunfal, Última Cena, crucifixión y resurrección. Corazón de la Pasión.",
     "refs": "Mt 21 · Mt 26-28",
     "cat": "pasion",
-    "tier": "primary"
+    "tier": "primary",
+    "link": "jerusalen.html"
   },
   {
     "name": "Caná",

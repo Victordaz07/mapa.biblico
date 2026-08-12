@@ -164,6 +164,10 @@
     border-top:1px dashed var(--line); padding-top:8px }
   .card .x{ position:absolute; top:8px; right:11px; border:0; background:transparent;
     font-size:20px; color:var(--muted); cursor:pointer; line-height:1 }
+  .card .clink{ display:none; margin-top:12px; text-align:center; text-decoration:none;
+    background:var(--navy); color:#f4ecd8; padding:9px 12px; border-radius:8px; font-size:14px;
+    border:1px solid var(--gold) }
+  .card .clink:hover{ background:#1a2f45 }
 
   .scrim{ position:absolute; inset:0; background:rgba(30,20,8,.35); z-index:39;
     opacity:0; visibility:hidden; transition:.2s }
@@ -228,6 +232,7 @@
       <span class="num" id="c-num"></span><h3 id="c-name"></h3>
       <p id="c-note"></p>
       <div class="refs" id="c-refs"></div>
+      <a class="clink" id="c-link" href="#">Entrar a la ciudad →</a>
     </div>
 
     <div class="scrim" id="scrim"></div>
@@ -393,11 +398,14 @@
     legFill.forEach(el=>el.classList.remove('on'));
     legCase.forEach(el=>el.classList.remove('on'));
   }
+  const cLink=document.getElementById('c-link');
   function fillCard(p){
     const hasN = p.n!=null;
     cNum.style.display = hasN ? '' : 'none';
     cNum.textContent = hasN ? p.n : '';
     cName.textContent=p.name; cNote.textContent=p.note||''; cRefs.textContent=p.refs||'';
+    cLink.style.display = p.link ? 'block' : 'none';
+    if(p.link) cLink.href = p.link;
     card.classList.add('show');
   }
   function select(i, fly){                          // lugar PRIMARIO (con recorrido)
