@@ -33,6 +33,15 @@
     cursor:pointer; font-size:16px; font-family:inherit }
   .tourbar button:hover{ background:#1a2f45 }
   .tourbar .lbl{ font-size:13px; color:var(--sepia); flex:1; text-align:center; font-variant-numeric:tabular-nums }
+  .via-toggle{ width:100%; margin-top:9px; display:flex; align-items:center; gap:8px; justify-content:center;
+    font-family:inherit; font-size:12.5px; color:var(--ink); background:#fbf5e4; border:1px solid var(--line);
+    border-radius:8px; padding:7px; cursor:pointer }
+  .via-toggle .vd{ width:11px; height:11px; border-radius:50%; background:#8a1f14 }
+  .via-toggle.on{ border-color:#8a1f14; background:#fff; color:#8a1f14; font-weight:600 }
+  .hot.via .pin .ring{ display:none }
+  .hot.via .pin .dot{ width:20px; height:20px; font-size:11px; background:#8a1f14 }
+  .hot.via.active .pin .dot{ transform:scale(1.3) }
+  .card.via .num{ background:#8a1f14 }
   .list{ flex:1; overflow-y:auto; padding:6px 8px 10px }
   .item{ display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:9px 11px;
     border:0; background:transparent; border-radius:9px; cursor:pointer; font-family:inherit; color:var(--ink) }
@@ -112,12 +121,13 @@
       <p>La ciudad en tiempos de Jesús</p>
     </div>
     <div class="tourbar">
-      <div class="tt">Recorrido de la Pasión</div>
+      <div class="tt" id="tourTitle">Recorrido de la Pasión</div>
       <div class="row">
         <button id="prev" aria-label="Anterior">‹</button>
         <div class="lbl" id="tourLbl">Toca ▶ o un sitio</div>
         <button id="next" aria-label="Siguiente">›</button>
       </div>
+      <button class="via-toggle" id="viaToggle"><span class="vd"></span>Vía Dolorosa · 14 estaciones</button>
     </div>
     <div class="list" id="list"></div>
     <div class="sb-foot">Plano esquemático · sitios orientativos</div>
@@ -285,6 +295,39 @@
   sep.textContent='Otros lugares'; listEl.appendChild(sep);
   RAW.filter(s=>s.cat!=='pass').forEach(s=>addItem(s,RAW.indexOf(s),false));
 
+  // ---- Vía Dolorosa: 14 estaciones (Antonia → Gólgota) ----
+  const VIA=[
+    {n:1, x:556,y:300, name:"Jesús es condenado a muerte", note:"Pilato lo sentencia en el pretorio.", refs:"Jn 19:16"},
+    {n:2, x:526,y:314, name:"Jesús carga con la cruz", note:"Recibe la cruz sobre sus hombros.", refs:"Jn 19:17"},
+    {n:3, x:496,y:326, name:"Primera caída", note:"Cae por primera vez bajo el peso de la cruz.", refs:"Tradición"},
+    {n:4, x:466,y:334, name:"Encuentra a su Madre", note:"Se cruza con María en el camino.", refs:"Tradición"},
+    {n:5, x:436,y:338, name:"Simón de Cirene", note:"Obligan a Simón a ayudarle a llevar la cruz.", refs:"Mc 15:21"},
+    {n:6, x:406,y:334, name:"Verónica enjuga su rostro", note:"Una mujer limpia el rostro de Jesús.", refs:"Tradición"},
+    {n:7, x:378,y:324, name:"Segunda caída", note:"Cae por segunda vez.", refs:"Tradición"},
+    {n:8, x:352,y:308, name:"Las mujeres de Jerusalén", note:"Consuela a las mujeres que lloran por él.", refs:"Lc 23:28"},
+    {n:9, x:332,y:288, name:"Tercera caída", note:"Cae por tercera vez, cerca del Gólgota.", refs:"Tradición"},
+    {n:10,x:316,y:266, name:"Despojado de sus vestiduras", note:"Le quitan las vestiduras.", refs:"Jn 19:23"},
+    {n:11,x:307,y:246, name:"Clavado en la cruz", note:"Es crucificado en el Gólgota.", refs:"Lc 23:33"},
+    {n:12,x:301,y:231, name:"Muere en la cruz", note:"Expira a la hora nona.", refs:"Mc 15:37"},
+    {n:13,x:300,y:221, name:"Bajado de la cruz", note:"Su cuerpo es entregado a su Madre.", refs:"Jn 19:38"},
+    {n:14,x:300,y:213, name:"Sepultado", note:"Puesto en un sepulcro nuevo, junto al lugar.", refs:"Jn 19:41-42"},
+  ];
+  VIA.forEach(s=>{ s.px=+(s.x/VB.w*100).toFixed(2); s.py=+(s.y/VB.h*100).toFixed(2); });
+  // ruta en el SVG (oculta hasta activar)
+  const viaG=add('g',{opacity:0,id:'viaG'});
+  const vline=poly(VIA.map(s=>[s.x,s.y]));
+  add('polyline',{points:vline,fill:'none',stroke:'#f4ecd8','stroke-width':3.4,
+    'stroke-linecap':'round','stroke-linejoin':'round',opacity:0.7},viaG);
+  add('polyline',{points:vline,fill:'none',stroke:'#8a1f14','stroke-width':1.9,
+    'stroke-dasharray':'2.4 2','stroke-linecap':'round','stroke-linejoin':'round'},viaG);
+  // marcadores (ocultos hasta activar)
+  const viaMarks=[]; let viaCurrent=-1, viaOn=false;
+  VIA.forEach((s,i)=>{ const b=document.createElement('button'); b.className='hot via'; b.style.display='none';
+    b.style.left=s.px+'%'; b.style.top=s.py+'%'; b.setAttribute('aria-label',s.name);
+    b.innerHTML='<span class="pin"><span class="dot">'+s.n+'</span></span>';
+    b.addEventListener('click',e=>{ e.stopPropagation(); showVia(i,true); });
+    canvas.appendChild(b); viaMarks.push(b); });
+
   function clamp(){ minScale=Math.min(vp.clientWidth/CW,vp.clientHeight/CH);
     scale=Math.max(minScale,Math.min(maxScale,scale));
     const sw=CW*scale,sh=CH*scale,vw=vp.clientWidth,vh=vp.clientHeight;
@@ -313,12 +356,32 @@
     tourLbl.textContent = s.cat==='pass' ? ('Pasión '+s.p+' / '+PASS.length+' · '+s.name) : s.name;
     if(fly) flyTo(s); }
   function closeCard(){ card.classList.remove('show'); hots.forEach(h=>h.classList.remove('active'));
-    [...listEl.children].forEach(it=>it.classList.remove('active')); current=-1;
+    viaMarks.forEach(m=>m.classList.remove('active'));
+    [...listEl.children].forEach(it=>it.classList.remove('active')); current=-1; viaCurrent=-1;
     tourLbl.textContent='Toca ▶ o un sitio'; }
   document.getElementById('close').addEventListener('click',e=>{e.stopPropagation();closeCard();});
 
-  // recorrido de la Pasión
-  function passStep(d){ let idx=PASS.findIndex(s=>RAW.indexOf(s)===current);
+  // ---- Vía Dolorosa: mostrar estación + toggle ----
+  function showVia(i,fly){ viaCurrent=i; current=-1; const s=VIA[i];
+    hots.forEach(h=>h.classList.remove('active'));
+    viaMarks.forEach((m,j)=>m.classList.toggle('active',j===i));
+    [...listEl.children].forEach(it=>it.classList.remove('active'));
+    card.classList.remove('pass'); card.classList.add('via');
+    cNum.textContent=s.n; cName.textContent=s.name; cNote.textContent=s.note||''; cRefs.textContent=s.refs||'';
+    card.classList.add('show'); tourLbl.textContent='Estación '+s.n+' / 14 · '+s.name;
+    if(fly) flyTo(s,2.8); }
+  function toggleVia(){ viaOn=!viaOn; viaG.setAttribute('opacity',viaOn?1:0);
+    viaMarks.forEach(m=>m.style.display=viaOn?'':'none');
+    document.getElementById('viaToggle').classList.toggle('on',viaOn);
+    document.getElementById('tourTitle').textContent = viaOn ? 'Vía Dolorosa' : 'Recorrido de la Pasión';
+    if(viaOn){ flyTo(VIA[0],1.7); } else { card.classList.remove('via'); closeCard(); } }
+  document.getElementById('viaToggle').addEventListener('click',toggleVia);
+
+  // recorrido paso a paso (Vía Dolorosa si está activa; si no, la Pasión)
+  function passStep(d){
+    if(viaOn){ const idx = viaCurrent<0 ? (d>0?0:VIA.length-1) : (viaCurrent+d+VIA.length)%VIA.length;
+      showVia(idx,true); return; }
+    let idx=PASS.findIndex(s=>RAW.indexOf(s)===current);
     idx = idx<0 ? (d>0?0:PASS.length-1) : (idx+d+PASS.length)%PASS.length;
     open(RAW.indexOf(PASS[idx]),true); }
   document.getElementById('next').addEventListener('click',()=>passStep(1));

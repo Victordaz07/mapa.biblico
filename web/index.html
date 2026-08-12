@@ -100,6 +100,7 @@
   .rc-chip i{ width:11px; height:11px; border-radius:50%; display:inline-block; opacity:.45 }
   .rc-chip.on{ border-color:var(--gold); background:#fff }
   .rc-chip.on i{ opacity:1 }
+  #filterChips .rc-chip{ padding:5px 12px }        /* filtros: sin punto de color */
 
   .hot{ position:absolute; transform:translate(-50%,-50%); cursor:pointer;
     border:0; padding:0; background:transparent; }
@@ -199,6 +200,10 @@
     </div>
     <div class="search">
       <input id="search" type="search" placeholder="Buscar lugar…" autocomplete="off" aria-label="Buscar lugar">
+    </div>
+    <div class="routes-ctrl" id="filterCtrl">
+      <div class="rc-title">Filtrar por etapa</div>
+      <div class="rc-chips" id="filterChips"></div>
     </div>
     <div class="routes-ctrl" id="routesCtrl">
       <div class="rc-title">Rutas históricas</div>
@@ -334,20 +339,25 @@
   const rcG=document.getElementById('rcGroups');
   if(!HIST.length){ const rc=document.getElementById('routesCtrl'); if(rc) rc.style.display='none'; }
   const byCat={}; HIST.forEach(h=>{ (byCat[h.cat]=byCat[h.cat]||[]).push(h); });
-  function mkChip(label,color,fn){ const c=document.createElement('button'); c.className='rc-chip';
-    c.innerHTML='<i style="background:'+color+'"></i>'+label; c.addEventListener('click',()=>fn(c)); return c; }
+  function mkChip(label,color){ const c=document.createElement('button'); c.className='rc-chip';
+    c.innerHTML='<i style="background:'+color+'"></i>'+label; return c; }
+  // modo EXCLUSIVO: activar un chip apaga los demás (mapa siempre limpio)
+  const routeChips=[];                                    // {chip, ids}
+  function setExclusive(entry){
+    const turnOn=!entry.chip.classList.contains('on');
+    routeChips.forEach(e=>{ e.chip.classList.remove('on'); e.ids.forEach(id=>histG[id].classList.remove('on')); });
+    if(turnOn){ entry.chip.classList.add('on'); entry.ids.forEach(id=>histG[id].classList.add('on')); }
+  }
   CATORDER.forEach(cat=>{ const rs=byCat[cat]; if(!rs) return;
     const g=document.createElement('div'); g.className='rc-group';
     const t=document.createElement('div'); t.className='rc-grouptitle'; t.textContent=CATLABEL[cat]||cat; g.appendChild(t);
     const chips=document.createElement('div'); chips.className='rc-chips'; g.appendChild(chips);
     if(cat==='camino'){                                   // un toggle para toda la red
-      chips.appendChild(mkChip('Mostrar red', rs[0].color, c=>{
-        const on=!c.classList.contains('on'); c.classList.toggle('on',on);
-        rs.forEach(h=>histG[h.id].classList.toggle('on',on)); }));
+      const c=mkChip('Mostrar red', rs[0].color); const entry={chip:c, ids:rs.map(h=>h.id)};
+      c.addEventListener('click',()=>setExclusive(entry)); routeChips.push(entry); chips.appendChild(c);
     } else {                                              // un chip por ruta
-      rs.forEach(h=>chips.appendChild(mkChip(h.name, h.color, c=>{
-        const on=!c.classList.contains('on'); c.classList.toggle('on',on);
-        histG[h.id].classList.toggle('on',on); })));
+      rs.forEach(h=>{ const c=mkChip(h.name,h.color); const entry={chip:c, ids:[h.id]};
+        c.addEventListener('click',()=>setExclusive(entry)); routeChips.push(entry); chips.appendChild(c); });
     }
     rcG.appendChild(g);
   });
@@ -373,13 +383,33 @@
       listEl.appendChild(it);
     });
   }
-  searchEl.addEventListener('input',()=>{
+  // ---------- filtro por etapa + búsqueda (combinados) ----------
+  let curFilter='todos';
+  const matchFilter=p=> curFilter==='todos' || (p.cat||'ciudad')===curFilter;
+  function refresh(){
     const q=searchEl.value.trim().toLowerCase();
+    P.forEach((p,i)=>{ hots[i].style.display = matchFilter(p) ? '' : 'none'; });
+    SEC.forEach((p,i)=>{ secEls[i].style.display = matchFilter(p) ? '' : 'none'; });
+    let secVis=0;
     [...listEl.children].forEach(it=>{
       if(it.classList.contains('list-sep')) return;
       const p = it.dataset.i!==undefined ? P[+it.dataset.i] : SEC[+it.dataset.s];
-      it.classList.toggle('hidden', q && !p.name.toLowerCase().includes(q));
+      const vis = matchFilter(p) && (!q || p.name.toLowerCase().includes(q));
+      it.classList.toggle('hidden', !vis);
+      if(vis && it.dataset.s!==undefined) secVis++;
     });
+    const sep=listEl.querySelector('.list-sep'); if(sep) sep.style.display = secVis? '' : 'none';
+  }
+  searchEl.addEventListener('input',refresh);
+  // chips de filtro
+  const FILTERS=[['todos','Todos'],['nacimiento','Nacimiento'],['ministerio','Ministerio'],
+                 ['milagro','Milagros'],['pasion','Pasión'],['ciudad','Ciudades']];
+  const fChips=document.getElementById('filterChips');
+  FILTERS.forEach(([k,label])=>{
+    const c=document.createElement('button'); c.className='rc-chip'+(k==='todos'?' on':''); c.textContent=label;
+    c.addEventListener('click',()=>{ curFilter=k;
+      [...fChips.children].forEach(x=>x.classList.remove('on')); c.classList.add('on'); refresh(); });
+    fChips.appendChild(c);
   });
 
   // ---------- transform ----------
