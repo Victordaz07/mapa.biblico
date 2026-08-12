@@ -76,6 +76,8 @@
   .pin .plabel{ position:absolute; top:calc(100% + 3px); left:50%; transform:translateX(-50%);
     font-size:11px; font-style:italic; color:#3a2c16; white-space:nowrap;
     text-shadow:0 0 3px var(--parch),0 0 3px var(--parch); pointer-events:none }
+  .pin .plabel{ transition:opacity .2s }
+  .canvas:not(.zoomed) .hot:not(.pass):not(.active) .plabel{ opacity:0 }  /* sitios: rótulo al acercar */
   @keyframes pulse{ 0%{transform:scale(.7);opacity:.85} 70%{transform:scale(1.3);opacity:0} 100%{opacity:0} }
   @media (prefers-reduced-motion:reduce){ .pin .ring{ animation:none } }
 
@@ -171,9 +173,11 @@
     const xi=pg[i][0],yi=pg[i][1],xj=pg[j][0],yj=pg[j][1];
     if(((yi>y)!=(yj>y)) && (x<(xj-xi)*(y-yi)/(yj-yi)+xi)) c=!c; } return c; }
   let seed=7; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+  // etiquetas: 'minor' (detalle) van a un grupo que solo aparece al acercar el zoom
+  const labelsMinor=document.createElementNS(NS,'g'); labelsMinor.setAttribute('id','labelsMinor');
   function txt(x,y,s,o){ o=o||{}; add('text',{x:x,y:y,'font-size':o.size||12,fill:o.fill||INK,
     'font-style':o.style||'italic','font-family':'Georgia,serif','text-anchor':o.anchor||'middle',
-    'font-weight':o.weight||'normal'}).textContent=s; }
+    'font-weight':o.weight||'normal'}, o.minor?labelsMinor:svg).textContent=s; }
 
   // ===== geometría base (viewBox 1000x1100; x:O→E, y:N→S) =====
   const TEMPLE={x:640,y:250,w:246,h:336};                         // Monte del Templo (herodiano)
@@ -195,7 +199,7 @@
   [KIDRON,HINNOM].forEach(v=>{ add('polygon',{points:poly(v),fill:'#dccda9',opacity:0.5});
     add('polygon',{points:poly(v),fill:'url(#hatch)',opacity:0.4}); });
   txt(940,470,'Valle de Cedrón',{size:12,fill:INK2}); txt(300,845,'Valle de Hinom',{size:12,fill:INK2});
-  txt(566,560,'Tiropeón',{size:10,fill:INK2,anchor:'start'});
+  txt(566,560,'Tiropeón',{size:10,fill:INK2,anchor:'start',minor:true});
 
   // Monte de los Olivos (colina hachurada + olivos)
   add('polygon',{points:poly(OLIVES),fill:'#e0d2ab',stroke:INK2,'stroke-width':1.2});
@@ -209,49 +213,54 @@
   add('polygon',{points:poly(CITY),fill:'#eaddba'});
   add('polygon',{points:poly(SPUR),fill:'#eaddba'});
 
-  // ===== calles principales (bandas claras bajo la trama) =====
+  // ===== calles principales (banda clara con borde marcado) =====
   const streets=[
     'M556,258 Q596,420 628,588 Q648,800 660,1002',   // eje N-S del Tiropeón (calle principal)
     'M300,300 Q470,320 624,318',                       // decumano norte
-    'M300,660 Q470,650 624,548',                       // calle de la Ciudad Alta al puente del Templo
-    'M300,470 L620,470',                               // transversal media (hacia el puente)
-    'M420,258 L430,760',                               // cardo de la Ciudad Alta
+    'M300,660 Q470,650 624,548',                       // Ciudad Alta → puente del Templo
+    'M300,470 L620,470',                               // transversal media
+    'M420,258 L430,762',                               // cardo de la Ciudad Alta
+    'M344,392 L356,760',                               // segunda calle N-S de la Ciudad Alta
+    'M300,392 L618,398',                               // transversal norte
+    'M636,606 Q652,800 658,1000',                      // calle del espolón (Ciudad de David)
   ];
-  streets.forEach(d=>add('path',{d:d,fill:'none',stroke:'#e7dabb','stroke-width':13,
-    'stroke-linecap':'round'}));
+  streets.forEach(d=>{
+    add('path',{d:d,fill:'none',stroke:'#cbb98d','stroke-width':14,'stroke-linecap':'round'});  // borde
+    add('path',{d:d,fill:'none',stroke:'#f0e7d0','stroke-width':10.5,'stroke-linecap':'round'}); // calzada
+  });
+  // muestreo de las calles para que las manzanas no las invadan
+  const streetPts=[]; { const tmp=document.createElementNS(NS,'path'); svg.appendChild(tmp);
+    streets.forEach(d=>{ tmp.setAttribute('d',d); const L=tmp.getTotalLength();
+      for(let l=0;l<=L;l+=6){ const p=tmp.getPointAtLength(l); streetPts.push([p.x,p.y]); } });
+    svg.removeChild(tmp); }
+  function onStreet(x,y){ for(let i=0;i<streetPts.length;i++){ const dx=x-streetPts[i][0],dy=y-streetPts[i][1];
+    if(dx*dx+dy*dy<74) return true; } return false; }
 
-  // ===== trama urbana: manzanas (insulae) con patio, por distrito =====
-  const blocks=add('g',{stroke:INK2,'stroke-width':0.9,fill:'#e2d3ac'});
-  function onStreet(x,y){ // evita dibujar manzanas sobre las calles principales
-    // aproximación: descarta franja del eje del Tiropeón y del cardo
-    const tiro = 556 + (y-258)*0.16; if(Math.abs(x-tiro)<16 && y>300) return true;
-    if(Math.abs(x-425)<15 && y>300 && y<760) return true;
-    if(Math.abs(y-470)<14 && x<620) return true;
-    if(Math.abs(y-318)<14) return true;
-    return false;
-  }
+  // ===== trama urbana: manzanas (insulae) con patio, por distrito (más finas) =====
+  const blocks=add('g',{stroke:INK2,'stroke-width':0.8,fill:'#e2d3ac'});
   function fabric(x0,x1,y0,y1,step,poly1){
     for(let gy=y0; gy<y1; gy+=step){ for(let gx=x0; gx<x1; gx+=step){
-      const x=gx+(rnd()-0.5)*3, y=gy+(rnd()-0.5)*3;
+      const x=gx+(rnd()-0.5)*2.4, y=gy+(rnd()-0.5)*2.4;
       if(!inPoly(x,y,poly1)) continue;
       if(x>TEMPLE.x-10 && x<TEMPLE.x+TEMPLE.w+10 && y>TEMPLE.y-10 && y<TEMPLE.y+TEMPLE.h+10) continue;
       if(onStreet(x,y)) continue;
-      const w=step-4-rnd()*2, h=step-4-rnd()*2;
+      const w=step-3.4-rnd()*1.4, h=step-3.4-rnd()*1.4;
       add('rect',{x:x.toFixed(1),y:y.toFixed(1),width:w.toFixed(1),height:h.toFixed(1)},blocks);
-      if(w>13&&h>13&&rnd()>0.35)  // patio interior
-        add('rect',{x:(x+w/2-2.5).toFixed(1),y:(y+h/2-2.5).toFixed(1),width:5,height:5,
-          fill:PARCH,stroke:INK2,'stroke-width':0.6},blocks);
+      if(w>8.5&&h>8.5&&rnd()>0.22)  // patio interior
+        add('rect',{x:(x+w/2-2).toFixed(1),y:(y+h/2-2).toFixed(1),width:4,height:4,
+          fill:PARCH,stroke:INK2,'stroke-width':0.5},blocks);
     }}
   }
-  fabric(300,624,258,430,20,CITY);       // barrio norte
-  fabric(262,600,438,760,18,CITY);       // Ciudad Alta (más fina)
-  fabric(586,724,600,1000,19,SPUR);      // Ciudad de David (espolón)
-  txt(400,610,'CIUDAD ALTA',{size:12,fill:INK2,style:'normal',weight:'bold'});
-  txt(648,700,'CIUDAD',{size:9,fill:INK2,style:'normal'}); txt(648,712,'DE DAVID',{size:9,fill:INK2,style:'normal'});
+  fabric(300,624,258,432,16,CITY);       // barrio norte
+  fabric(262,600,438,762,14,CITY);       // Ciudad Alta (fina y densa)
+  fabric(586,724,600,1000,15,SPUR);      // Ciudad de David (espolón)
+  txt(388,632,'CIUDAD ALTA',{size:12,fill:INK2,style:'normal',weight:'bold'});
+  txt(648,706,'CIUDAD',{size:9,fill:INK2,style:'normal'}); txt(648,718,'DE DAVID',{size:9,fill:INK2,style:'normal'});
+  txt(452,300,'Barrio Norte',{size:10,fill:INK2,minor:true});
 
   // ===== estanques (agua) =====
   function pool(x,y,w,h,label,ly){ add('rect',{x:x,y:y,width:w,height:h,rx:3,fill:NAVY,opacity:0.9});
-    if(label) txt(x+w/2,ly||y-4,label,{size:10,fill:INK}); }
+    if(label) txt(x+w/2,ly||y-4,label,{size:10,fill:INK,minor:true}); }
   pool(700,232,30,18,null); pool(700,254,30,18,'Betesda',252);   // estanque doble de Betesda (N)
   pool(646,996,34,26,'Siloé',1034);                               // Siloé (S)
   pool(322,388,30,40,'E. de las Torres',384);                     // estanque de Ezequías (NO)
@@ -287,7 +296,28 @@
   add('rect',{x:266,y:452,width:74,height:104,fill:'#e2d3ac',stroke:INK,'stroke-width':2});
   add('rect',{x:276,y:462,width:54,height:84,fill:'none',stroke:INK,'stroke-width':0.9});
   [270,296,322].forEach(tx=>add('rect',{x:tx,y:436,width:16,height:16,fill:'#e2d3ac',stroke:INK,'stroke-width':1.4}));
-  txt(303,432,'Torres de Herodes',{size:9,fill:INK});
+  txt(303,432,'Torres de Herodes',{size:9,fill:INK,minor:true});
+  txt(303,566,'Palacio de Herodes',{size:9,fill:INK2,minor:true});
+
+  // ===== más estructuras herodianas =====
+  // Xystus (plaza pública junto al puente del Templo)
+  add('rect',{x:556,y:452,width:44,height:36,fill:'#e6d7b2',stroke:INK,'stroke-width':1.4});
+  for(let i=1;i<6;i++) add('line',{x1:556+i*44/6,y1:452,x2:556+i*44/6,y2:488,stroke:INK,'stroke-width':0.5});
+  txt(578,448,'Xystus',{size:8.5,fill:INK2,minor:true});
+  // Palacio asmoneo (Ciudad Alta)
+  add('rect',{x:498,y:536,width:52,height:44,fill:'#e6d7b2',stroke:INK,'stroke-width':1.6});
+  add('rect',{x:506,y:544,width:36,height:28,fill:'none',stroke:INK,'stroke-width':0.7});
+  txt(524,532,'Palacio asmoneo',{size:8.5,fill:INK2,minor:true});
+  // Teatro herodiano (hemiciclo, sur de la Ciudad Alta)
+  add('path',{d:'M470,690 a46,30 0 0,1 92,0 z',fill:'#e6d7b2',stroke:INK,'stroke-width':1.4});
+  for(let i=1;i<5;i++) add('path',{d:`M${516-i*9},690 a${i*9},${i*6} 0 0,1 ${i*18},0`,fill:'none',stroke:INK,'stroke-width':0.5});
+  txt(516,706,'Teatro',{size:8.5,fill:INK2,minor:true});
+  // Arco de Robinson (escalinata en el ángulo SO del Templo)
+  add('path',{d:'M642,568 l-22,26 l10,6 l18,-24 z',fill:'#e6d7b2',stroke:INK,'stroke-width':1});
+  txt(614,600,'Arco de Robinson',{size:8,fill:INK2,anchor:'end',minor:true});
+  // Puertas de Hulda (acceso de peregrinos por el muro sur del Templo)
+  add('rect',{x:724,y:582,width:20,height:6,fill:INK});  add('rect',{x:764,y:582,width:28,height:6,fill:INK});
+  txt(756,600,'Puertas de Hulda',{size:8,fill:INK2,minor:true});
 
   // ===== murallas: Primer y Segundo muro (doble filo) + torres + Templo =====
   function wall(pts,closed){ const p=closed?poly(pts)+' '+pts[0].join(','):poly(pts);
@@ -298,15 +328,21 @@
   wall([[T.x,T.y],[T.x+T.w,T.y],[T.x+T.w,T.y+T.h],[T.x,T.y+T.h],[T.x,T.y]],false); // muros del Templo
   wall(SPUR,true);                                                                  // muro del espolón
 
-  // ===== puertas (rótulos) =====
+  // ===== puertas (rótulos, solo al acercar) =====
   [['P. de Gennat',252,468,'end'],['P. de los Esenios',300,776,'middle'],
    ['P. de la Fuente',664,1002,'start'],['P. de las Ovejas',720,238,'start'],
-   ['P. Dorada',888,470,'start']].forEach(([n,x,y,a])=>txt(x+(a==='end'?-6:a==='start'?6:0),y,n,{size:9,fill:INK2,anchor:a}));
+   ['P. Dorada',888,470,'start'],['P. del Valle',258,616,'end'],
+   ['P. del Agua',680,760,'start']].forEach(([n,x,y,a])=>
+     txt(x+(a==='end'?-6:a==='start'?6:0),y,n,{size:9,fill:INK2,anchor:a,minor:true}));
 
   // puente al Templo (arco de Wilson) desde la Ciudad Alta
   add('line',{x1:600,y1:470,x2:640,y2:470,stroke:INK,'stroke-width':2.4});
   add('line',{x1:600,y1:466,x2:640,y2:466,stroke:INK,'stroke-width':0.8});
   add('line',{x1:600,y1:474,x2:640,y2:474,stroke:INK,'stroke-width':0.8});
+  txt(620,464,'puente de Wilson',{size:8,fill:INK2,anchor:'end',minor:true});
+
+  // etiquetas de detalle por encima de todo (aparecen al acercar el zoom)
+  svg.appendChild(labelsMinor);
 
   // ---------- datos de sitios ----------
   // x,y en viewBox -> %; cat: site|pass ; p = orden en el recorrido de la Pasión
@@ -404,8 +440,12 @@
     const sw=CW*scale,sh=CH*scale,vw=vp.clientWidth,vh=vp.clientHeight;
     tx=sw<=vw?(vw-sw)/2:Math.min(0,Math.max(vw-sw,tx));
     ty=sh<=vh?(vh-sh)/2:Math.min(0,Math.max(vh-sh,ty)); }
+  const labelsMinorEl=document.getElementById('labelsMinor');
   function apply(){ clamp(); canvas.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')';
-    canvas.style.setProperty('--z',scale); }
+    canvas.style.setProperty('--z',scale);
+    // etiquetas de detalle: aparecen al acercar (la vista general respira)
+    if(labelsMinorEl) labelsMinorEl.style.opacity = Math.max(0,Math.min(1,(scale-1.05)/0.55)).toFixed(2);
+    canvas.classList.toggle('zoomed', scale>1.35); }
   function zoomAt(cx,cy,f){ const ns=Math.max(minScale,Math.min(maxScale,scale*f)),k=ns/scale;
     tx=cx-(cx-tx)*k; ty=cy-(cy-ty)*k; scale=ns; apply(); }
   let anim=null;
