@@ -65,6 +65,9 @@
     display:block; -webkit-user-drag:none; user-select:none }
   .route{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
     overflow:visible }
+  .leg{ fill:none; stroke:var(--gold); stroke-width:1.7; stroke-dasharray:3.5 3;
+    stroke-linecap:round; stroke-linejoin:round; opacity:.62; transition:opacity .2s }
+  .leg.on{ opacity:1; stroke:var(--gold2); stroke-width:2.6; stroke-dasharray:none }
 
   .hot{ position:absolute; transform:translate(-50%,-50%); cursor:pointer;
     border:0; padding:0; background:transparent; }
@@ -162,6 +165,8 @@
       <div class="canvas" id="canvas">
         <img id="map" src="assets/mapa.jpg" alt="Mapa de la Vida de Jesús — Tierra Santa">
         <svg class="route" id="route" viewBox="0 0 100 130" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <!-- rutas de terreno inyectadas por JS -->
+
         <!-- marcadores inyectados por JS -->
       </div>
     </div>
@@ -190,6 +195,7 @@
 </div>
 
 <script src="data.js"></script>
+<script src="routes.js"></script>
 <script>
 (function(){
   "use strict";
@@ -220,12 +226,18 @@
     b.addEventListener('click',e=>{ e.stopPropagation(); select(i,true); });
     canvas.appendChild(b); hots.push(b);
   });
-  // línea del itinerario (orden narrativo)
-  const pts=P.map(p=>[p.x, p.y*ASPECT].join(',')).join(' ');
-  routeSvg.innerHTML =
-    '<polyline points="'+pts+'" fill="none" stroke="#b8923a" stroke-width="1.6" '+
-    'stroke-dasharray="3 3" stroke-linecap="round" stroke-linejoin="round" '+
-    'vector-effect="non-scaling-stroke" opacity="0.75"/>';
+  // itinerario: rutas que siguen el terreno (least-cost sobre el DEM).
+  // Si no hay routes.js, cae a líneas rectas entre puntos consecutivos.
+  const ROUTES = window.ROUTES || P.slice(0,-1).map((p,i)=>(
+    {a:p.name,b:P[i+1].name,pts:[[p.x,p.y],[P[i+1].x,P[i+1].y]]}));
+  const legEls=[];
+  ROUTES.forEach((rt,k)=>{
+    const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+    pl.setAttribute('points', rt.pts.map(q=>q[0]+','+(q[1]*ASPECT)).join(' '));
+    pl.setAttribute('vector-effect','non-scaling-stroke');
+    pl.setAttribute('class','leg'); pl.dataset.k=k;
+    routeSvg.appendChild(pl); legEls.push(pl);
+  });
 
   // ---------- lista lateral ----------
   P.forEach((p,i)=>{
@@ -289,11 +301,13 @@
     tourPos.textContent=(i+1)+' / '+P.length+' · '+p.name;
     document.getElementById('prev').disabled=false;
     document.getElementById('next').disabled=false;
+    legEls.forEach((el,k)=>el.classList.toggle('on', k===i-1)); // resalta el tramo entrante
     if(fly) flyTo(p);
   }
   function closeCard(){ card.classList.remove('show');
     hots.forEach(h=>h.classList.remove('active'));
-    [...listEl.children].forEach(it=>it.classList.remove('active')); current=-1; }
+    [...listEl.children].forEach(it=>it.classList.remove('active'));
+    legEls.forEach(el=>el.classList.remove('on')); current=-1; }
   document.getElementById('close').addEventListener('click',e=>{e.stopPropagation();closeCard();});
 
   // ---------- recorrido guiado ----------
