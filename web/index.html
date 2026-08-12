@@ -2,142 +2,354 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Vida de Jesús · Mapa interactivo</title>
 <style>
   :root{
-    --parch:#efe6cf; --parch2:#e7dbbe; --ink:#2e2212; --sepia:#5a3c18;
-    --gold:#b8923a; --navy:#0d1b2a; --line:#cdbd97;
+    --parch:#efe6cf; --parch2:#e7dbbe; --panel:#f3ead3; --ink:#2e2212;
+    --sepia:#5a3c18; --gold:#b8923a; --gold2:#e0b64e; --navy:#0d1b2a;
+    --line:#cdbd97; --muted:#8a744e;
+    --sbw:300px;
   }
   *{box-sizing:border-box}
-  html,body{margin:0}
+  html,body{margin:0;height:100%}
   body{
-    background:radial-gradient(120% 120% at 50% 0%, #f4ecd8 0%, #e7dbbe 100%);
-    color:var(--ink); font-family:"Georgia","Times New Roman",serif;
-    -webkit-text-size-adjust:100%;
+    background:var(--parch2); color:var(--ink);
+    font-family:"Georgia","Times New Roman",serif;
+    height:100vh; overflow:hidden; -webkit-text-size-adjust:100%;
   }
-  header{ text-align:center; padding:22px 16px 6px }
-  header h1{ margin:0; font-size:clamp(22px,4vw,34px); letter-spacing:.5px;
-    color:var(--sepia); font-weight:700 }
-  header p{ margin:6px 0 0; font-style:italic; color:#6b5636; font-size:15px }
-  .hint{ display:inline-block; margin-top:10px; font-size:13px; color:#7a6642;
-    border:1px solid var(--line); border-radius:999px; padding:5px 14px;
-    background:rgba(255,255,255,.35) }
+  .app{ display:flex; height:100%; }
 
-  .stage{ max-width:920px; margin:16px auto 40px; padding:0 14px }
-  .map-wrap{ position:relative; border:1px solid var(--line);
-    box-shadow:0 10px 34px rgba(60,40,15,.28); border-radius:4px; overflow:hidden;
-    background:#e7dbbe }
-  .map-wrap img{ display:block; width:100%; height:auto; user-select:none;
-    -webkit-user-drag:none }
+  /* ---------- sidebar ---------- */
+  .sidebar{
+    width:var(--sbw); flex:0 0 var(--sbw); background:var(--panel);
+    border-right:1px solid var(--line); display:flex; flex-direction:column;
+    z-index:40; box-shadow:2px 0 14px rgba(60,40,15,.12);
+  }
+  .sb-head{ padding:16px 18px 12px; border-bottom:1px solid var(--line) }
+  .sb-head h1{ margin:0; font-size:23px; color:var(--sepia); letter-spacing:.3px }
+  .sb-head p{ margin:3px 0 0; font-style:italic; font-size:13px; color:var(--muted) }
+  .search{ padding:12px 14px 8px }
+  .search input{
+    width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:8px;
+    background:#fbf5e4; font-family:inherit; font-size:14px; color:var(--ink);
+  }
+  .search input:focus{ outline:2px solid var(--gold); outline-offset:1px }
+  .list{ flex:1; overflow-y:auto; padding:4px 8px 10px }
+  .item{
+    display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+    padding:10px 11px; border:0; background:transparent; border-radius:9px;
+    cursor:pointer; font-family:inherit; color:var(--ink); transition:background .13s;
+  }
+  .item:hover{ background:rgba(184,146,58,.13) }
+  .item.active{ background:rgba(184,146,58,.22) }
+  .item .b{
+    flex:0 0 26px; height:26px; border-radius:50%; background:var(--navy);
+    color:#f4ecd8; display:grid; place-items:center; font-size:13px; font-weight:700;
+    border:1.5px solid var(--gold);
+  }
+  .item .t{ font-size:15px; line-height:1.15 }
+  .item .t small{ display:block; color:var(--muted); font-size:11.5px; font-style:italic }
+  .item.hidden{ display:none }
+  .sb-foot{ padding:10px 14px; border-top:1px solid var(--line);
+    font-size:11.5px; color:var(--muted); font-style:italic; text-align:center }
 
-  /* marcadores */
-  .hot{ position:absolute; transform:translate(-50%,-50%);
-    display:grid; place-items:center; cursor:pointer; border:0; padding:0;
-    background:transparent }
-  .hot .ring{ position:absolute; width:34px; height:34px; border-radius:50%;
-    border:2px solid var(--gold); box-shadow:0 0 0 3px rgba(184,146,58,.18);
-    animation:pulse 2.4s ease-out infinite }
-  .hot .dot{ position:relative; width:22px; height:22px; border-radius:50%;
+  /* ---------- stage / map ---------- */
+  .stage{ position:relative; flex:1; overflow:hidden; background:var(--parch2);
+    touch-action:none; }
+  .viewport{ position:absolute; inset:0; overflow:hidden; cursor:grab }
+  .viewport.grabbing{ cursor:grabbing }
+  .canvas{ position:absolute; top:0; left:0; width:1000px; height:1300px;
+    transform-origin:0 0; will-change:transform; --z:1 }
+  .canvas img{ position:absolute; inset:0; width:100%; height:100%;
+    display:block; -webkit-user-drag:none; user-select:none }
+  .route{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
+    overflow:visible }
+
+  .hot{ position:absolute; transform:translate(-50%,-50%); cursor:pointer;
+    border:0; padding:0; background:transparent; }
+  .pin{ position:relative; display:grid; place-items:center;
+    transform:scale(calc(1 / var(--z))); transform-origin:center; }
+  .pin .ring{ position:absolute; width:34px; height:34px; border-radius:50%;
+    border:2px solid var(--gold); animation:pulse 2.4s ease-out infinite }
+  .pin .dot{ position:relative; width:24px; height:24px; border-radius:50%;
     background:var(--navy); color:#f4ecd8; display:grid; place-items:center;
-    font-size:12.5px; font-weight:700; border:2px solid var(--gold);
-    box-shadow:0 2px 6px rgba(0,0,0,.35); transition:transform .15s }
-  .hot:hover .dot,.hot.active .dot{ transform:scale(1.18) }
-  .hot.active .ring{ border-color:#e0b64e }
-  @keyframes pulse{ 0%{transform:scale(.7);opacity:.9} 70%{transform:scale(1.25);opacity:0} 100%{opacity:0} }
+    font-size:13px; font-weight:700; border:2px solid var(--gold);
+    box-shadow:0 2px 6px rgba(0,0,0,.4); transition:transform .13s }
+  .hot:hover .pin .dot,.hot.active .pin .dot{ transform:scale(1.18) }
+  .hot.active .pin .ring{ border-color:var(--gold2); border-width:3px }
+  @keyframes pulse{ 0%{transform:scale(.7);opacity:.85} 70%{transform:scale(1.3);opacity:0} 100%{opacity:0} }
+  @media (prefers-reduced-motion:reduce){ .pin .ring{ animation:none } }
 
-  /* tarjeta / popover */
-  .card{ position:absolute; z-index:20; width:min(280px,78vw);
-    background:linear-gradient(180deg,#fbf5e4,#f2e7cc);
-    border:1px solid var(--gold); border-radius:8px; padding:14px 15px 13px;
-    box-shadow:0 14px 30px rgba(50,32,10,.34); opacity:0; visibility:hidden;
-    transform:translateY(6px); transition:opacity .16s, transform .16s }
-  .card.show{ opacity:1; visibility:visible; transform:translateY(0) }
-  .card .num{ display:inline-block; min-width:22px; height:22px; line-height:22px;
+  /* ---------- controles flotantes ---------- */
+  .ctrls{ position:absolute; top:14px; right:14px; display:flex; flex-direction:column;
+    gap:6px; z-index:30 }
+  .ctrls button{ width:40px; height:40px; border:1px solid var(--line);
+    background:rgba(251,245,228,.94); color:var(--sepia); font-size:20px; cursor:pointer;
+    border-radius:9px; display:grid; place-items:center; box-shadow:0 3px 9px rgba(50,32,10,.18);
+    font-family:inherit; line-height:1 }
+  .ctrls button:hover{ background:#fff; border-color:var(--gold) }
+  .ctrls button:active{ transform:translateY(1px) }
+
+  .menu-btn{ position:absolute; top:14px; left:14px; z-index:30; display:none;
+    width:42px; height:42px; border:1px solid var(--line); border-radius:9px;
+    background:rgba(251,245,228,.94); color:var(--sepia); font-size:20px; cursor:pointer;
+    box-shadow:0 3px 9px rgba(50,32,10,.18) }
+
+  /* ---------- recorrido guiado ---------- */
+  .tour{ position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:10px; z-index:30;
+    background:rgba(251,245,228,.95); border:1px solid var(--gold); border-radius:999px;
+    padding:6px 8px; box-shadow:0 6px 18px rgba(50,32,10,.24) }
+  .tour button{ border:0; background:var(--navy); color:#f4ecd8; width:38px; height:38px;
+    border-radius:50%; cursor:pointer; font-size:18px; display:grid; place-items:center;
+    font-family:inherit }
+  .tour button:hover{ background:#1a2f45 }
+  .tour button:disabled{ opacity:.35; cursor:default }
+  .tour .lbl{ font-size:13.5px; color:var(--sepia); min-width:118px; text-align:center;
+    font-variant-numeric:tabular-nums }
+  .tour .lbl b{ display:block; font-size:14.5px }
+
+  /* ---------- tarjeta de detalle ---------- */
+  .card{ position:absolute; left:16px; bottom:16px; z-index:35; width:min(320px,calc(100% - 32px));
+    background:linear-gradient(180deg,#fbf5e4,#f1e6cb); border:1px solid var(--gold);
+    border-radius:12px; padding:15px 16px 14px; box-shadow:0 14px 32px rgba(50,32,10,.34);
+    transform:translateY(14px); opacity:0; visibility:hidden; transition:.18s }
+  .card.show{ transform:none; opacity:1; visibility:visible }
+  .card .num{ display:inline-block; min-width:24px; height:24px; line-height:24px;
     text-align:center; background:var(--navy); color:#f4ecd8; border-radius:50%;
-    font-size:12.5px; font-weight:700; margin-right:8px; border:1px solid var(--gold) }
-  .card h3{ display:inline; font-size:18px; color:var(--sepia); margin:0 }
-  .card p{ margin:9px 0 0; font-size:14.5px; line-height:1.45 }
-  .card .refs{ margin-top:9px; font-style:italic; font-size:12.5px; color:#8a6f45;
-    border-top:1px dashed var(--line); padding-top:7px }
-  .card .x{ position:absolute; top:6px; right:9px; cursor:pointer; border:0;
-    background:transparent; font-size:18px; color:#9a7f52; line-height:1 }
+    font-size:13px; font-weight:700; margin-right:9px; border:1px solid var(--gold) }
+  .card h3{ display:inline; font-size:19px; color:var(--sepia); margin:0 }
+  .card p{ margin:10px 0 0; font-size:15px; line-height:1.48 }
+  .card .refs{ margin-top:10px; font-style:italic; font-size:12.5px; color:var(--muted);
+    border-top:1px dashed var(--line); padding-top:8px }
+  .card .x{ position:absolute; top:8px; right:11px; border:0; background:transparent;
+    font-size:20px; color:var(--muted); cursor:pointer; line-height:1 }
 
-  footer{ text-align:center; font-size:12.5px; color:#8a744e; padding:0 16px 30px;
-    font-style:italic }
+  .scrim{ position:absolute; inset:0; background:rgba(30,20,8,.35); z-index:39;
+    opacity:0; visibility:hidden; transition:.2s }
+
+  @media (max-width:820px){
+    .sidebar{ position:absolute; inset:0 auto 0 0; transform:translateX(-100%);
+      transition:transform .22s; }
+    .sidebar.open{ transform:none }
+    .menu-btn{ display:grid; place-items:center }
+    .scrim.show{ opacity:1; visibility:visible }
+    .ctrls{ top:auto; bottom:74px }
+  }
 </style>
 </head>
 <body>
-  <header>
-    <h1>Vida de Jesús</h1>
-    <p>Mapa interactivo · Galilea, Samaria y Judea</p>
-    <div class="hint">Toca los puntos <b>①–⑥</b> para descubrir qué ocurrió en cada lugar</div>
-  </header>
+<div class="app">
+  <!-- barra lateral: índice + búsqueda -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <h1>Vida de Jesús</h1>
+      <p>Galilea, Samaria y Judea</p>
+    </div>
+    <div class="search">
+      <input id="search" type="search" placeholder="Buscar lugar…" autocomplete="off" aria-label="Buscar lugar">
+    </div>
+    <div class="list" id="list"></div>
+    <div class="sb-foot">Grabado sobre relieve real (SRTM)</div>
+  </aside>
 
+  <!-- escenario del mapa -->
   <div class="stage">
-    <div class="map-wrap" id="wrap">
-      <img id="map" src="assets/mapa.jpg" alt="Mapa de la Vida de Jesús — Tierra Santa">
-      <!-- marcadores y tarjeta se inyectan por JS -->
-      <div class="card" id="card" role="dialog" aria-live="polite">
-        <button class="x" id="close" aria-label="Cerrar">×</button>
-        <span class="num" id="c-num"></span><h3 id="c-name"></h3>
-        <p id="c-note"></p>
-        <div class="refs" id="c-refs"></div>
+    <button class="menu-btn" id="menuBtn" aria-label="Índice">☰</button>
+
+    <div class="viewport" id="viewport">
+      <div class="canvas" id="canvas">
+        <img id="map" src="assets/mapa.jpg" alt="Mapa de la Vida de Jesús — Tierra Santa">
+        <svg class="route" id="route" viewBox="0 0 100 130" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <!-- marcadores inyectados por JS -->
       </div>
     </div>
-  </div>
 
-  <footer>Ilustración grabada sobre relieve real (SRTM) · Referencias bíblicas orientativas</footer>
+    <div class="ctrls">
+      <button id="zin"  aria-label="Acercar">+</button>
+      <button id="zout" aria-label="Alejar">−</button>
+      <button id="zfit" aria-label="Ver todo" title="Ver todo">⤢</button>
+    </div>
+
+    <div class="tour" role="group" aria-label="Recorrido guiado">
+      <button id="prev" aria-label="Anterior">‹</button>
+      <div class="lbl" id="tourLbl"><b>Recorrido</b><span id="tourPos">Toca ▶ o un punto</span></div>
+      <button id="next" aria-label="Siguiente">›</button>
+    </div>
+
+    <div class="card" id="card" role="dialog" aria-live="polite">
+      <button class="x" id="close" aria-label="Cerrar">×</button>
+      <span class="num" id="c-num"></span><h3 id="c-name"></h3>
+      <p id="c-note"></p>
+      <div class="refs" id="c-refs"></div>
+    </div>
+
+    <div class="scrim" id="scrim"></div>
+  </div>
+</div>
 
 <script src="data.js"></script>
 <script>
 (function(){
-  const wrap = document.getElementById('wrap');
+  "use strict";
+  const P = (window.PLACES||[]).slice().sort((a,b)=>a.n-b.n);
+  const ASPECT = 1300/1000;                       // alto/ancho del lienzo
+  const vp = document.getElementById('viewport');
+  const canvas = document.getElementById('canvas');
+  const routeSvg = document.getElementById('route');
+  const listEl = document.getElementById('list');
+  const searchEl = document.getElementById('search');
   const card = document.getElementById('card');
-  const cNum = document.getElementById('c-num'), cName = document.getElementById('c-name');
-  const cNote = document.getElementById('c-note'), cRefs = document.getElementById('c-refs');
-  let activeEl = null;
+  const cNum=document.getElementById('c-num'), cName=document.getElementById('c-name');
+  const cNote=document.getElementById('c-note'), cRefs=document.getElementById('c-refs');
+  const tourPos=document.getElementById('tourPos');
+  const sidebar=document.getElementById('sidebar'), scrim=document.getElementById('scrim');
 
-  // crear marcadores
-  (window.PLACES||[]).forEach(p=>{
-    const b = document.createElement('button');
-    b.className = 'hot';
-    b.style.left = p.x + '%';
-    b.style.top  = p.y + '%';
-    b.setAttribute('aria-label', p.name);
-    b.innerHTML = '<span class="ring"></span><span class="dot">'+p.n+'</span>';
-    b.addEventListener('click', e=>{ e.stopPropagation(); open(p, b); });
-    wrap.appendChild(b);
+  const CW=1000, CH=1300;
+  let scale=1, tx=0, ty=0, minScale=0.2, maxScale=5;
+  let current=-1;                                 // índice activo en P
+  const hots=[];
+
+  // ---------- marcadores + itinerario ----------
+  P.forEach((p,i)=>{
+    const b=document.createElement('button');
+    b.className='hot'; b.style.left=p.x+'%'; b.style.top=p.y+'%';
+    b.setAttribute('aria-label',p.name);
+    b.innerHTML='<span class="pin"><span class="ring"></span><span class="dot">'+p.n+'</span></span>';
+    b.addEventListener('click',e=>{ e.stopPropagation(); select(i,true); });
+    canvas.appendChild(b); hots.push(b);
+  });
+  // línea del itinerario (orden narrativo)
+  const pts=P.map(p=>[p.x, p.y*ASPECT].join(',')).join(' ');
+  routeSvg.innerHTML =
+    '<polyline points="'+pts+'" fill="none" stroke="#b8923a" stroke-width="1.6" '+
+    'stroke-dasharray="3 3" stroke-linecap="round" stroke-linejoin="round" '+
+    'vector-effect="non-scaling-stroke" opacity="0.75"/>';
+
+  // ---------- lista lateral ----------
+  P.forEach((p,i)=>{
+    const it=document.createElement('button');
+    it.className='item'; it.dataset.i=i;
+    it.innerHTML='<span class="b">'+p.n+'</span><span class="t">'+p.name+
+      '<small>'+(p.refs||'')+'</small></span>';
+    it.addEventListener('click',()=>{ select(i,true); closeDrawer(); });
+    listEl.appendChild(it);
+  });
+  searchEl.addEventListener('input',()=>{
+    const q=searchEl.value.trim().toLowerCase();
+    [...listEl.children].forEach(it=>{
+      const p=P[+it.dataset.i];
+      it.classList.toggle('hidden', q && !p.name.toLowerCase().includes(q));
+    });
   });
 
-  function open(p, el){
-    if(activeEl) activeEl.classList.remove('active');
-    activeEl = el; el.classList.add('active');
-    cNum.textContent = p.n; cName.textContent = p.name;
-    cNote.textContent = p.note; cRefs.textContent = p.refs;
-    card.classList.add('show');
-    position(p, el);
+  // ---------- transform ----------
+  function clamp(){
+    minScale = Math.min(vp.clientWidth/CW, vp.clientHeight/CH);
+    if(scale<minScale) scale=minScale;
+    if(scale>maxScale) scale=maxScale;
+    const sw=CW*scale, sh=CH*scale, vw=vp.clientWidth, vh=vp.clientHeight;
+    tx = sw<=vw ? (vw-sw)/2 : Math.min(0, Math.max(vw-sw, tx));
+    ty = sh<=vh ? (vh-sh)/2 : Math.min(0, Math.max(vh-sh, ty));
   }
-  function position(p, el){
-    const W = wrap.clientWidth, H = wrap.clientHeight;
-    const cw = card.offsetWidth, ch = card.offsetHeight;
-    let left = (p.x/100)*W - cw/2;
-    left = Math.max(8, Math.min(left, W - cw - 8));
-    // arriba del marcador si cabe, si no debajo
-    let top = (p.y/100)*H - ch - 26;
-    if(top < 8) top = (p.y/100)*H + 26;
-    card.style.left = left + 'px';
-    card.style.top  = top + 'px';
+  function apply(){ clamp();
+    canvas.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')';
+    canvas.style.setProperty('--z', scale);
   }
-  function close(){
-    card.classList.remove('show');
-    if(activeEl){ activeEl.classList.remove('active'); activeEl = null; }
+  function zoomAt(cx,cy,factor){
+    const ns=Math.max(minScale,Math.min(maxScale,scale*factor));
+    const k=ns/scale; tx=cx-(cx-tx)*k; ty=cy-(cy-ty)*k; scale=ns; apply();
   }
-  document.getElementById('close').addEventListener('click', e=>{ e.stopPropagation(); close(); });
-  wrap.addEventListener('click', close);
-  window.addEventListener('resize', ()=>{ if(activeEl){
-    const p = window.PLACES.find(q=>q.n==cNum.textContent); if(p) position(p, activeEl);
-  }});
+
+  // vuelo suave a un punto (centrado) a un zoom objetivo
+  let anim=null;
+  function flyTo(p, targetScale){
+    const vw=vp.clientWidth, vh=vp.clientHeight;
+    const ts=Math.max(minScale,Math.min(maxScale, targetScale||Math.max(minScale*2.4,1.6)));
+    const nx=p.x/100*CW, ny=p.y/100*CH;
+    const ttx=vw/2-ts*nx, tty=vh/2-ts*ny;
+    const s0=scale,x0=tx,y0=ty, dur=520, t0=performance.now();
+    if(anim) cancelAnimationFrame(anim);
+    const ease=t=>1-Math.pow(1-t,3);
+    (function step(now){
+      let k=Math.min(1,(now-t0)/dur); const e=ease(k);
+      scale=s0+(ts-s0)*e; tx=x0+(ttx-x0)*e; ty=y0+(tty-y0)*e; apply();
+      if(k<1) anim=requestAnimationFrame(step);
+    })(performance.now());
+  }
+
+  // ---------- selección / tarjeta ----------
+  function select(i, fly){
+    current=i; const p=P[i];
+    hots.forEach((h,j)=>h.classList.toggle('active',j===i));
+    [...listEl.children].forEach(it=>it.classList.toggle('active',+it.dataset.i===i));
+    cNum.textContent=p.n; cName.textContent=p.name; cNote.textContent=p.note||'';
+    cRefs.textContent=p.refs||''; card.classList.add('show');
+    tourPos.textContent=(i+1)+' / '+P.length+' · '+p.name;
+    document.getElementById('prev').disabled=false;
+    document.getElementById('next').disabled=false;
+    if(fly) flyTo(p);
+  }
+  function closeCard(){ card.classList.remove('show');
+    hots.forEach(h=>h.classList.remove('active'));
+    [...listEl.children].forEach(it=>it.classList.remove('active')); current=-1; }
+  document.getElementById('close').addEventListener('click',e=>{e.stopPropagation();closeCard();});
+
+  // ---------- recorrido guiado ----------
+  document.getElementById('next').addEventListener('click',()=>{
+    select(current<0?0:(current+1)%P.length, true); });
+  document.getElementById('prev').addEventListener('click',()=>{
+    select(current<=0?P.length-1:current-1, true); });
+
+  // ---------- controles de zoom ----------
+  document.getElementById('zin').addEventListener('click',()=>zoomAt(vp.clientWidth/2,vp.clientHeight/2,1.4));
+  document.getElementById('zout').addEventListener('click',()=>zoomAt(vp.clientWidth/2,vp.clientHeight/2,1/1.4));
+  document.getElementById('zfit').addEventListener('click',()=>{ scale=minScale; apply(); closeCard(); });
+
+  // ---------- rueda / arrastre / pellizco ----------
+  vp.addEventListener('wheel',e=>{ e.preventDefault();
+    const r=vp.getBoundingClientRect();
+    zoomAt(e.clientX-r.left, e.clientY-r.top, e.deltaY<0?1.12:1/1.12);
+  },{passive:false});
+
+  let drag=null, pts2=new Map(), pinch=null;
+  vp.addEventListener('pointerdown',e=>{
+    vp.setPointerCapture(e.pointerId); pts2.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts2.size===1){ drag={x:e.clientX,y:e.clientY,moved:0}; vp.classList.add('grabbing'); }
+    else if(pts2.size===2){ const a=[...pts2.values()];
+      pinch={d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}; drag=null; }
+  });
+  vp.addEventListener('pointermove',e=>{
+    if(!pts2.has(e.pointerId)) return;
+    pts2.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pinch && pts2.size===2){ const a=[...pts2.values()];
+      const nd=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+      const r=vp.getBoundingClientRect();
+      zoomAt((a[0].x+a[1].x)/2-r.left,(a[0].y+a[1].y)/2-r.top, nd/pinch.d);
+      pinch.d=nd; return;
+    }
+    if(drag){ tx+=e.clientX-drag.x; ty+=e.clientY-drag.y; drag.moved+=Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y);
+      drag.x=e.clientX; drag.y=e.clientY; apply(); }
+  });
+  function upPtr(e){ pts2.delete(e.pointerId); if(pts2.size<2) pinch=null;
+    if(pts2.size===0){ vp.classList.remove('grabbing'); drag=null; } }
+  vp.addEventListener('pointerup',upPtr); vp.addEventListener('pointercancel',upPtr);
+  vp.addEventListener('click',e=>{ if(e.target===vp || e.target.id==='map'){ closeCard(); }});
+
+  // ---------- drawer móvil ----------
+  function openDrawer(){ sidebar.classList.add('open'); scrim.classList.add('show'); }
+  function closeDrawer(){ sidebar.classList.remove('open'); scrim.classList.remove('show'); }
+  document.getElementById('menuBtn').addEventListener('click',openDrawer);
+  scrim.addEventListener('click',closeDrawer);
+
+  window.addEventListener('resize',()=>{ apply(); });
+
+  // ---------- init ----------
+  function start(){ scale=Math.min(vp.clientWidth/CW, vp.clientHeight/CH); tx=0; ty=0; apply(); }
+  if(document.getElementById('map').complete) start();
+  else document.getElementById('map').addEventListener('load',start);
+  start();
 })();
 </script>
 </body>
