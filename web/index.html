@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vida de Jesús · Mapa interactivo</title>
+<style>
+  :root{
+    --parch:#efe6cf; --parch2:#e7dbbe; --ink:#2e2212; --sepia:#5a3c18;
+    --gold:#b8923a; --navy:#0d1b2a; --line:#cdbd97;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(120% 120% at 50% 0%, #f4ecd8 0%, #e7dbbe 100%);
+    color:var(--ink); font-family:"Georgia","Times New Roman",serif;
+    -webkit-text-size-adjust:100%;
+  }
+  header{ text-align:center; padding:22px 16px 6px }
+  header h1{ margin:0; font-size:clamp(22px,4vw,34px); letter-spacing:.5px;
+    color:var(--sepia); font-weight:700 }
+  header p{ margin:6px 0 0; font-style:italic; color:#6b5636; font-size:15px }
+  .hint{ display:inline-block; margin-top:10px; font-size:13px; color:#7a6642;
+    border:1px solid var(--line); border-radius:999px; padding:5px 14px;
+    background:rgba(255,255,255,.35) }
+
+  .stage{ max-width:920px; margin:16px auto 40px; padding:0 14px }
+  .map-wrap{ position:relative; border:1px solid var(--line);
+    box-shadow:0 10px 34px rgba(60,40,15,.28); border-radius:4px; overflow:hidden;
+    background:#e7dbbe }
+  .map-wrap img{ display:block; width:100%; height:auto; user-select:none;
+    -webkit-user-drag:none }
+
+  /* marcadores */
+  .hot{ position:absolute; transform:translate(-50%,-50%);
+    display:grid; place-items:center; cursor:pointer; border:0; padding:0;
+    background:transparent }
+  .hot .ring{ position:absolute; width:34px; height:34px; border-radius:50%;
+    border:2px solid var(--gold); box-shadow:0 0 0 3px rgba(184,146,58,.18);
+    animation:pulse 2.4s ease-out infinite }
+  .hot .dot{ position:relative; width:22px; height:22px; border-radius:50%;
+    background:var(--navy); color:#f4ecd8; display:grid; place-items:center;
+    font-size:12.5px; font-weight:700; border:2px solid var(--gold);
+    box-shadow:0 2px 6px rgba(0,0,0,.35); transition:transform .15s }
+  .hot:hover .dot,.hot.active .dot{ transform:scale(1.18) }
+  .hot.active .ring{ border-color:#e0b64e }
+  @keyframes pulse{ 0%{transform:scale(.7);opacity:.9} 70%{transform:scale(1.25);opacity:0} 100%{opacity:0} }
+
+  /* tarjeta / popover */
+  .card{ position:absolute; z-index:20; width:min(280px,78vw);
+    background:linear-gradient(180deg,#fbf5e4,#f2e7cc);
+    border:1px solid var(--gold); border-radius:8px; padding:14px 15px 13px;
+    box-shadow:0 14px 30px rgba(50,32,10,.34); opacity:0; visibility:hidden;
+    transform:translateY(6px); transition:opacity .16s, transform .16s }
+  .card.show{ opacity:1; visibility:visible; transform:translateY(0) }
+  .card .num{ display:inline-block; min-width:22px; height:22px; line-height:22px;
+    text-align:center; background:var(--navy); color:#f4ecd8; border-radius:50%;
+    font-size:12.5px; font-weight:700; margin-right:8px; border:1px solid var(--gold) }
+  .card h3{ display:inline; font-size:18px; color:var(--sepia); margin:0 }
+  .card p{ margin:9px 0 0; font-size:14.5px; line-height:1.45 }
+  .card .refs{ margin-top:9px; font-style:italic; font-size:12.5px; color:#8a6f45;
+    border-top:1px dashed var(--line); padding-top:7px }
+  .card .x{ position:absolute; top:6px; right:9px; cursor:pointer; border:0;
+    background:transparent; font-size:18px; color:#9a7f52; line-height:1 }
+
+  footer{ text-align:center; font-size:12.5px; color:#8a744e; padding:0 16px 30px;
+    font-style:italic }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Vida de Jesús</h1>
+    <p>Mapa interactivo · Galilea, Samaria y Judea</p>
+    <div class="hint">Toca los puntos <b>①–⑥</b> para descubrir qué ocurrió en cada lugar</div>
+  </header>
+
+  <div class="stage">
+    <div class="map-wrap" id="wrap">
+      <img id="map" src="assets/mapa.jpg" alt="Mapa de la Vida de Jesús — Tierra Santa">
+      <!-- marcadores y tarjeta se inyectan por JS -->
+      <div class="card" id="card" role="dialog" aria-live="polite">
+        <button class="x" id="close" aria-label="Cerrar">×</button>
+        <span class="num" id="c-num"></span><h3 id="c-name"></h3>
+        <p id="c-note"></p>
+        <div class="refs" id="c-refs"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Ilustración grabada sobre relieve real (SRTM) · Referencias bíblicas orientativas</footer>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  const wrap = document.getElementById('wrap');
+  const card = document.getElementById('card');
+  const cNum = document.getElementById('c-num'), cName = document.getElementById('c-name');
+  const cNote = document.getElementById('c-note'), cRefs = document.getElementById('c-refs');
+  let activeEl = null;
+
+  // crear marcadores
+  (window.PLACES||[]).forEach(p=>{
+    const b = document.createElement('button');
+    b.className = 'hot';
+    b.style.left = p.x + '%';
+    b.style.top  = p.y + '%';
+    b.setAttribute('aria-label', p.name);
+    b.innerHTML = '<span class="ring"></span><span class="dot">'+p.n+'</span>';
+    b.addEventListener('click', e=>{ e.stopPropagation(); open(p, b); });
+    wrap.appendChild(b);
+  });
+
+  function open(p, el){
+    if(activeEl) activeEl.classList.remove('active');
+    activeEl = el; el.classList.add('active');
+    cNum.textContent = p.n; cName.textContent = p.name;
+    cNote.textContent = p.note; cRefs.textContent = p.refs;
+    card.classList.add('show');
+    position(p, el);
+  }
+  function position(p, el){
+    const W = wrap.clientWidth, H = wrap.clientHeight;
+    const cw = card.offsetWidth, ch = card.offsetHeight;
+    let left = (p.x/100)*W - cw/2;
+    left = Math.max(8, Math.min(left, W - cw - 8));
+    // arriba del marcador si cabe, si no debajo
+    let top = (p.y/100)*H - ch - 26;
+    if(top < 8) top = (p.y/100)*H + 26;
+    card.style.left = left + 'px';
+    card.style.top  = top + 'px';
+  }
+  function close(){
+    card.classList.remove('show');
+    if(activeEl){ activeEl.classList.remove('active'); activeEl = null; }
+  }
+  document.getElementById('close').addEventListener('click', e=>{ e.stopPropagation(); close(); });
+  wrap.addEventListener('click', close);
+  window.addEventListener('resize', ()=>{ if(activeEl){
+    const p = window.PLACES.find(q=>q.n==cNum.textContent); if(p) position(p, activeEl);
+  }});
+})();
+</script>
+</body>
+</html>
