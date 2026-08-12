@@ -106,7 +106,7 @@ window.PLACES = [
     "name": "Tiberíades",
     "x": 49.143,
     "y": 31.176,
-    "note": "Ciudad junto al mar de Galilea, capital de Herodes Antipas.",
+    "note": "De sus orillas zarparon barcas hacia el lugar donde Jesús multiplicó los panes.",
     "refs": "Jn 6:23",
     "cat": "ciudad",
     "tier": "secondary"
@@ -115,17 +115,17 @@ window.PLACES = [
     "name": "Magdala",
     "x": 48.424,
     "y": 30.114,
-    "note": "Pueblo de María Magdalena.",
+    "note": "Pueblo de María Magdalena, de quien Jesús expulsó siete demonios.",
     "refs": "Lc 8:2",
-    "cat": "ciudad",
+    "cat": "ministerio",
     "tier": "secondary"
   },
   {
     "name": "Séforis",
     "x": 37.114,
     "y": 32.921,
-    "note": "Gran ciudad a una hora de Nazaret.",
-    "refs": "",
+    "note": "Capital herodiana a una hora de Nazaret; la tradición dice que José trabajó en su reconstrucción.",
+    "refs": "Tradición",
     "cat": "ciudad",
     "tier": "secondary"
   },
@@ -142,8 +142,8 @@ window.PLACES = [
     "name": "Escitópolis",
     "x": 47.619,
     "y": 41.255,
-    "note": "Principal ciudad de la Decápolis (Bet-Seán).",
-    "refs": "",
+    "note": "La mayor ciudad de la Decápolis (Bet-Seán); su región oyó la fama de Jesús.",
+    "refs": "Mc 7:31",
     "cat": "ciudad",
     "tier": "secondary"
   },
@@ -232,8 +232,8 @@ window.PLACES = [
     "name": "Gamala",
     "x": 59.143,
     "y": 28.0,
-    "note": "Ciudad de la Decápolis en los Altos del Golán.",
-    "refs": "Contexto histórico — Josefo",
+    "note": "Escenario de una resistencia heroica en la guerra judía (67 d.C.), narrada por Josefo.",
+    "refs": "Josefo, Guerra IV",
     "cat": "ciudad",
     "tier": "secondary"
   },
@@ -268,9 +268,9 @@ window.PLACES = [
     "name": "Hipos",
     "x": 55.038,
     "y": 31.39,
-    "note": "Ciudad de la Decápolis con vista al mar de Galilea.",
-    "refs": "Contexto histórico — Decápolis",
-    "cat": "ciudad",
+    "note": "Ciudad de la Decápolis; de su región acudían multitudes a oír a Jesús.",
+    "refs": "Mt 4:25",
+    "cat": "ministerio",
     "tier": "secondary"
   },
   {
@@ -313,8 +313,8 @@ window.PLACES = [
     "name": "Herodión",
     "x": 35.41,
     "y": 70.162,
-    "note": "Fortaleza-palacio de Herodes el Grande, cerca de Belén.",
-    "refs": "Contexto histórico — Josefo",
+    "note": "Fortaleza-palacio donde fue sepultado Herodes el Grande, cerca de Belén.",
+    "refs": "Josefo, Guerra I",
     "cat": "ciudad",
     "tier": "secondary"
   },
