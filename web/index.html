@@ -71,18 +71,20 @@
     display:block; -webkit-user-drag:none; user-select:none }
   .route{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
     overflow:visible }
-  /* caminos grabados: doble línea (filo sepia + centro claro), escalan con el mapa */
-  .road-casing{ fill:none; stroke:#4a3a22; stroke-width:.66;
-    stroke-linecap:round; stroke-linejoin:round; opacity:.9 }
-  .road-fill{ fill:none; stroke:#ece0c0; stroke-width:.30;
-    stroke-linecap:round; stroke-linejoin:round; transition:stroke .2s, stroke-width .2s }
-  .road-fill.on{ stroke:var(--gold2); stroke-width:.40 }
-  .road-casing.on{ stroke:#3a2c16 }
+  /* rutas: líneas finas de grosor CONSTANTE (no escalan) con halo sutil.
+     Estilo del mapa de referencia: guion parejo, extremos redondos. */
+  .rt-halo{ fill:none; stroke:#f4ecd8; stroke-width:3.4; stroke-linecap:round; stroke-linejoin:round;
+    opacity:.55; vector-effect:non-scaling-stroke }
+  .rt-line{ fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;
+    vector-effect:non-scaling-stroke; transition:stroke-width .2s }
+  /* itinerario narrativo (recorrido de la vida) */
+  .itin .rt-line{ stroke:var(--gold); stroke-dasharray:1 4.5 }         /* punteado fino dorado */
+  .itin.on .rt-line{ stroke:var(--gold2); stroke-width:2.4; stroke-dasharray:none }
+  .itin.on .rt-halo{ opacity:.8 }
   /* rutas históricas (toggle) */
   .histroute{ opacity:0; transition:opacity .25s; pointer-events:none }
   .histroute.on{ opacity:1 }
-  .hr-cas{ fill:none; stroke:#f4ecd8; stroke-width:.9; stroke-linecap:round; stroke-linejoin:round; opacity:.7 }
-  .hr-line{ fill:none; stroke-width:.5; stroke-dasharray:2.6 2.1; stroke-linecap:round; stroke-linejoin:round }
+  .histroute .rt-line{ stroke-dasharray:7 5 }                          /* guion parejo */
   /* control de rutas en el sidebar */
   .routes-ctrl{ padding:8px 14px 4px }
   .rc-title{ font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:6px }
@@ -288,31 +290,35 @@
   const ROUTES = window.ROUTES || P.slice(0,-1).map((p,i)=>(
     {a:p.name,b:P[i+1].name,pts:[[p.x,p.y],[P[i+1].x,P[i+1].y]]}));
   const SVGNS='http://www.w3.org/2000/svg';
-  const legFill=[], legCase=[];
-  const ptsStr=rt=>rt.pts.map(q=>q[0]+','+(q[1]*ASPECT)).join(' ');
-  // 1) todos los filos (casing) primero, para que las uniones queden limpias
-  ROUTES.forEach(rt=>{
-    const c=document.createElementNS(SVGNS,'polyline');
-    c.setAttribute('points',ptsStr(rt)); c.setAttribute('class','road-casing');
-    routeSvg.appendChild(c); legCase.push(c);
-  });
-  // 2) el centro claro encima
-  ROUTES.forEach((rt,k)=>{
-    const f=document.createElementNS(SVGNS,'polyline');
-    f.setAttribute('points',ptsStr(rt)); f.setAttribute('class','road-fill'); f.dataset.k=k;
-    routeSvg.appendChild(f); legFill.push(f);
-  });
-  // 3) rutas históricas (ocultas hasta activarlas con los chips)
+  const legEls=[];                                   // <g class="itin"> por tramo
+  // curva suave Catmull-Rom -> path SVG (puntos ya en coords del viewBox)
+  function smoothD(raw){
+    const p=raw.map(q=>[q[0], q[1]*ASPECT]);
+    if(p.length<3) return 'M'+p.map(q=>q.join(' ')).join(' L ');
+    let d='M'+p[0][0].toFixed(2)+' '+p[0][1].toFixed(2);
+    for(let i=0;i<p.length-1;i++){
+      const p0=p[i-1]||p[i], p1=p[i], p2=p[i+1], p3=p[i+2]||p2;
+      const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+      const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+      d+=' C'+c1x.toFixed(2)+' '+c1y.toFixed(2)+' '+c2x.toFixed(2)+' '+c2y.toFixed(2)+
+         ' '+p2[0].toFixed(2)+' '+p2[1].toFixed(2);
+    }
+    return d;
+  }
+  function routeGroup(pts, cls, color){
+    const g=document.createElementNS(SVGNS,'g'); g.setAttribute('class',cls);
+    const d=smoothD(pts);
+    const halo=document.createElementNS(SVGNS,'path'); halo.setAttribute('d',d); halo.setAttribute('class','rt-halo');
+    const line=document.createElementNS(SVGNS,'path'); line.setAttribute('d',d); line.setAttribute('class','rt-line');
+    if(color) line.setAttribute('stroke',color);
+    g.appendChild(halo); g.appendChild(line); routeSvg.appendChild(g); return g;
+  }
+  // 1) itinerario narrativo (un grupo por tramo, para poder resaltar en el recorrido)
+  ROUTES.forEach((rt,k)=>{ const g=routeGroup(rt.pts,'itin'); g.dataset.k=k; legEls.push(g); });
+  // 2) rutas históricas (ocultas hasta activarlas con los chips)
   const HIST = window.HISTROUTES || [];
   const histG = {};
-  HIST.forEach(h=>{
-    const g=document.createElementNS(SVGNS,'g'); g.setAttribute('class','histroute'); g.dataset.route=h.id;
-    const p=h.pts.map(q=>q[0]+','+(q[1]*ASPECT)).join(' ');
-    const cas=document.createElementNS(SVGNS,'polyline'); cas.setAttribute('points',p); cas.setAttribute('class','hr-cas');
-    const ln=document.createElementNS(SVGNS,'polyline'); ln.setAttribute('points',p); ln.setAttribute('class','hr-line');
-    ln.setAttribute('stroke',h.color);
-    g.appendChild(cas); g.appendChild(ln); routeSvg.appendChild(g); histG[h.id]=g;
-  });
+  HIST.forEach(h=>{ histG[h.id]=routeGroup(h.pts,'histroute',h.color); histG[h.id].dataset.route=h.id; });
   // chips de activación en el sidebar
   const rcChips=document.getElementById('rcChips');
   if(!HIST.length){ const rc=document.getElementById('routesCtrl'); if(rc) rc.style.display='none'; }
@@ -395,8 +401,7 @@
     hots.forEach(h=>h.classList.remove('active'));
     secEls.forEach(h=>h.classList.remove('active'));
     [...listEl.children].forEach(it=>it.classList.remove('active'));
-    legFill.forEach(el=>el.classList.remove('on'));
-    legCase.forEach(el=>el.classList.remove('on'));
+    legEls.forEach(el=>el.classList.remove('on'));
   }
   const cLink=document.getElementById('c-link');
   function fillCard(p){
@@ -416,8 +421,7 @@
     tourPos.textContent=(i+1)+' / '+P.length+' · '+p.name;
     document.getElementById('prev').disabled=false;
     document.getElementById('next').disabled=false;
-    legFill.forEach((el,k)=>el.classList.toggle('on', k===i-1)); // resalta el tramo entrante
-    legCase.forEach((el,k)=>el.classList.toggle('on', k===i-1));
+    legEls.forEach((el,k)=>el.classList.toggle('on', k===i-1)); // resalta el tramo entrante
     if(fly) flyTo(p);
   }
   function openSec(i, fly){                          // ciudad SECUNDARIA (fuera del recorrido)

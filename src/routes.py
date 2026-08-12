@@ -93,10 +93,10 @@ def smooth_decimate(path_rc):
     xs = rc[:, 1] * F / W * 100.0
     ys = rc[:, 0] * F / H * 100.0
     if len(xs) > 5:
-        xs = gaussian_filter(xs, 2.5)
-        ys = gaussian_filter(ys, 2.5)
-    # decimar a ~cada 6 celdas para archivo ligero
-    step = max(1, len(xs) // 90)
+        xs = gaussian_filter(xs, 4.0)
+        ys = gaussian_filter(ys, 4.0)
+    # decimar a pocos puntos: la curva suave (Catmull-Rom) se hace en el cliente
+    step = max(1, len(xs) // 55)
     xs = np.r_[xs[::step], xs[-1]]
     ys = np.r_[ys[::step], ys[-1]]
     return [[round(float(a), 3), round(float(b), 3)] for a, b in zip(xs, ys)]
