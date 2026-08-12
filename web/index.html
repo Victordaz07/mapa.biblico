@@ -51,6 +51,12 @@
   .item .t{ font-size:15px; line-height:1.15 }
   .item .t small{ display:block; color:var(--muted); font-size:11.5px; font-style:italic }
   .item.hidden{ display:none }
+  .list-sep{ padding:13px 14px 5px; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); border-top:1px solid var(--line); margin-top:6px }
+  .item.sec .b{ background:transparent; border:0; flex-basis:26px }
+  .item.sec .b::before{ content:''; width:11px; height:11px; border-radius:50%;
+    background:var(--navy); border:1.5px solid var(--gold) }
+  .item.sec .t{ font-size:14px }
   .sb-foot{ padding:10px 14px; border-top:1px solid var(--line);
     font-size:11.5px; color:var(--muted); font-style:italic; text-align:center }
 
@@ -87,6 +93,17 @@
   .hot.active .pin .ring{ border-color:var(--gold2); border-width:3px }
   @keyframes pulse{ 0%{transform:scale(.7);opacity:.85} 70%{transform:scale(1.3);opacity:0} 100%{opacity:0} }
   @media (prefers-reduced-motion:reduce){ .pin .ring{ animation:none } }
+
+  /* ciudades secundarias: punto pequeño + etiqueta */
+  .hot.sec .pin{ display:flex; align-items:center; gap:4px }
+  .hot.sec .sdot{ width:10px; height:10px; border-radius:50%; background:var(--navy);
+    border:1.5px solid var(--gold); box-shadow:0 1px 3px rgba(0,0,0,.4); transition:transform .13s }
+  .hot.sec:hover .sdot{ transform:scale(1.3) }
+  .hot.sec.active .sdot{ background:var(--gold2); transform:scale(1.3) }
+  .hot.sec .slabel{ font-size:11px; font-style:italic; color:#3a2c16; white-space:nowrap;
+    text-shadow:0 0 3px #efe6cf,0 0 3px #efe6cf,0 0 2px #efe6cf; pointer-events:none; opacity:0;
+    transition:opacity .2s }
+  .canvas.labels .hot.sec .slabel{ opacity:1 }
 
   /* ---------- controles flotantes ---------- */
   .ctrls{ position:absolute; top:14px; right:14px; display:flex; flex-direction:column;
@@ -203,7 +220,9 @@
 <script>
 (function(){
   "use strict";
-  const P = (window.PLACES||[]).slice().sort((a,b)=>a.n-b.n);
+  const ALL = (window.PLACES||[]);
+  const P   = ALL.filter(p=>p.tier!=='secondary').slice().sort((a,b)=>a.n-b.n);
+  const SEC = ALL.filter(p=>p.tier==='secondary');
   const ASPECT = 1300/1000;                       // alto/ancho del lienzo
   const vp = document.getElementById('viewport');
   const canvas = document.getElementById('canvas');
@@ -229,6 +248,16 @@
     b.innerHTML='<span class="pin"><span class="ring"></span><span class="dot">'+p.n+'</span></span>';
     b.addEventListener('click',e=>{ e.stopPropagation(); select(i,true); });
     canvas.appendChild(b); hots.push(b);
+  });
+  // marcadores secundarios (punto pequeño + etiqueta)
+  const secEls=[];
+  SEC.forEach((p,i)=>{
+    const b=document.createElement('button');
+    b.className='hot sec'; b.style.left=p.x+'%'; b.style.top=p.y+'%';
+    b.setAttribute('aria-label',p.name);
+    b.innerHTML='<span class="pin"><span class="sdot"></span><span class="slabel">'+p.name+'</span></span>';
+    b.addEventListener('click',e=>{ e.stopPropagation(); openSec(i,true); });
+    canvas.appendChild(b); secEls.push(b);
   });
   // itinerario: rutas que siguen el terreno (least-cost sobre el DEM).
   // Si no hay routes.js, cae a líneas rectas entre puntos consecutivos.
@@ -259,10 +288,23 @@
     it.addEventListener('click',()=>{ select(i,true); closeDrawer(); });
     listEl.appendChild(it);
   });
+  if(SEC.length){
+    const hd=document.createElement('div'); hd.className='list-sep';
+    hd.textContent='Otras ciudades'; listEl.appendChild(hd);
+    SEC.forEach((p,i)=>{
+      const it=document.createElement('button');
+      it.className='item sec'; it.dataset.s=i;
+      it.innerHTML='<span class="b"></span><span class="t">'+p.name+
+        '<small>'+(p.refs||'')+'</small></span>';
+      it.addEventListener('click',()=>{ openSec(i,true); closeDrawer(); });
+      listEl.appendChild(it);
+    });
+  }
   searchEl.addEventListener('input',()=>{
     const q=searchEl.value.trim().toLowerCase();
     [...listEl.children].forEach(it=>{
-      const p=P[+it.dataset.i];
+      if(it.classList.contains('list-sep')) return;
+      const p = it.dataset.i!==undefined ? P[+it.dataset.i] : SEC[+it.dataset.s];
       it.classList.toggle('hidden', q && !p.name.toLowerCase().includes(q));
     });
   });
@@ -279,6 +321,7 @@
   function apply(){ clamp();
     canvas.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')';
     canvas.style.setProperty('--z', scale);
+    canvas.classList.toggle('labels', scale > minScale*1.35);  // etiquetas al acercar
   }
   function zoomAt(cx,cy,factor){
     const ns=Math.max(minScale,Math.min(maxScale,scale*factor));
@@ -303,12 +346,25 @@
   }
 
   // ---------- selección / tarjeta ----------
-  function select(i, fly){
-    current=i; const p=P[i];
-    hots.forEach((h,j)=>h.classList.toggle('active',j===i));
-    [...listEl.children].forEach(it=>it.classList.toggle('active',+it.dataset.i===i));
-    cNum.textContent=p.n; cName.textContent=p.name; cNote.textContent=p.note||'';
-    cRefs.textContent=p.refs||''; card.classList.add('show');
+  function clearActive(){
+    hots.forEach(h=>h.classList.remove('active'));
+    secEls.forEach(h=>h.classList.remove('active'));
+    [...listEl.children].forEach(it=>it.classList.remove('active'));
+    legFill.forEach(el=>el.classList.remove('on'));
+    legCase.forEach(el=>el.classList.remove('on'));
+  }
+  function fillCard(p){
+    const hasN = p.n!=null;
+    cNum.style.display = hasN ? '' : 'none';
+    cNum.textContent = hasN ? p.n : '';
+    cName.textContent=p.name; cNote.textContent=p.note||''; cRefs.textContent=p.refs||'';
+    card.classList.add('show');
+  }
+  function select(i, fly){                          // lugar PRIMARIO (con recorrido)
+    current=i; const p=P[i]; clearActive();
+    hots[i].classList.add('active');
+    const it=[...listEl.children].find(el=>+el.dataset.i===i); if(it) it.classList.add('active');
+    fillCard(p);
     tourPos.textContent=(i+1)+' / '+P.length+' · '+p.name;
     document.getElementById('prev').disabled=false;
     document.getElementById('next').disabled=false;
@@ -316,11 +372,16 @@
     legCase.forEach((el,k)=>el.classList.toggle('on', k===i-1));
     if(fly) flyTo(p);
   }
-  function closeCard(){ card.classList.remove('show');
-    hots.forEach(h=>h.classList.remove('active'));
-    [...listEl.children].forEach(it=>it.classList.remove('active'));
-    legFill.forEach(el=>el.classList.remove('on'));
-    legCase.forEach(el=>el.classList.remove('on')); current=-1; }
+  function openSec(i, fly){                          // ciudad SECUNDARIA (fuera del recorrido)
+    current=-1; const p=SEC[i]; clearActive();
+    secEls[i].classList.add('active');
+    const it=[...listEl.children].find(el=>el.dataset.s!==undefined && +el.dataset.s===i);
+    if(it) it.classList.add('active');
+    fillCard(p); tourPos.textContent=p.name;
+    if(fly) flyTo(p, 2.4);
+  }
+  function closeCard(){ card.classList.remove('show'); clearActive(); current=-1;
+    tourPos.textContent='Toca ▶ o un punto'; }
   document.getElementById('close').addEventListener('click',e=>{e.stopPropagation();closeCard();});
 
   // ---------- recorrido guiado ----------
